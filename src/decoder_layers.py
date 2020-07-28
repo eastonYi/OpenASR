@@ -30,7 +30,7 @@ class TransformerDecoder(nn.Module):
         self.nhead = config["nhead"]
         self.num_layers = config["num_layers"]
         self.encoder_dim = config["encoder_dim"]
-        self.d_feedforward = config["d_feedforward"]
+        self.dim_feedforward = config["dim_feedforward"]
         self.vocab_size = config["vocab_size"]
         self.dropout_rate = config["dropout_rate"]
         self.activation = config["activation"]
@@ -43,7 +43,7 @@ class TransformerDecoder(nn.Module):
         transformer_decoder_layer = transformer.TransformerDecoderLayer(
                 d_model=self.d_model,
                 nhead=self.nhead,
-                d_feedforward=self.d_feedforward,
+                dim_feedforward=self.dim_feedforward,
                 dropout=self.dropout_rate,
                 activation=self.activation)
         self.transformer_block = transformer.TransformerDecoder(transformer_decoder_layer,
@@ -89,7 +89,7 @@ class CIF_Decoder(nn.Module):
         self.nhead = config["nhead"]
         self.num_layers = config["num_layers"]
         self.encoder_dim = config["encoder_dim"]
-        self.d_feedforward = config["d_feedforward"]
+        self.dim_feedforward = config["dim_feedforward"]
         self.vocab_size = config["vocab_size"]
         self.dropout_rate = config["dropout_rate"]
         self.activation = config["activation"]
@@ -102,7 +102,7 @@ class CIF_Decoder(nn.Module):
         transformer_decoder_layer = transformer.TransformerEncoderLayer(
                 d_model=self.d_model,
                 nhead=self.nhead,
-                d_feedforward=self.d_feedforward,
+                dim_feedforward=self.dim_feedforward,
                 dropout=self.dropout_rate,
                 activation=self.activation)
         self.transformer_block = transformer.TransformerEncoder(transformer_decoder_layer,
@@ -111,7 +111,6 @@ class CIF_Decoder(nn.Module):
         self.input_affine = nn.Linear(2*self.d_model, self.d_model)
         self.output_affine = nn.Linear(2*self.d_model, self.vocab_size)
         nn.init.xavier_normal_(self.output_affine.weight)
-        self.emb.weight = self.output_affine.weight # tying weight
 
     def forward(self, encoder_outputs, decoder_inputs, decoder_input_lengths):
         device = encoder_outputs.device

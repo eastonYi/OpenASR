@@ -63,8 +63,11 @@ class CharTokenizer(object):
         return len(self.unit2id)
 
 
-def gen_casual_targets(idslist, maxlen, sos_id, eos_id):
-    ids_with_sym_list = [[sos_id]+ids+[eos_id] for ids in idslist]
+def gen_casual_targets(idslist, maxlen, sos_id, eos_id, no_eos=False):
+    if no_eos:
+        ids_with_sym_list = [[sos_id]+ids for ids in idslist]
+    else:
+        ids_with_sym_list = [[sos_id]+ids+[eos_id] for ids in idslist]
     B = len(idslist)
     padded_rawids = -torch.ones(B, maxlen+1).long()
 
@@ -206,7 +209,6 @@ class TextCollate(object):
     def __init__(self, tokenizer, maxlen):
         self.tokenizer = tokenizer
         self.maxlen = maxlen
-        return
 
     def __call__(self, batch):
         timer = utils.Timer()
@@ -219,10 +221,10 @@ class TextCollate(object):
 
 
 class WaveCollate(object):
-    def __init__(self, tokenizer, maxlen):
+    def __init__(self, tokenizer, maxlen, no_eos=False):
         self.tokenizer = tokenizer
         self.maxlen = maxlen
-        return
+        self.no_eos = no_eos
 
     def __call__(self, batch):
         utts = [d["utt"] for d in batch]
@@ -235,16 +237,17 @@ class WaveCollate(object):
         timer.tic()
         rawids_list = [self.tokenizer.encode(t) for t in trans]
         ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
-                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM))
+                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.no_eos)
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
+
         return utts, padded_waveforms, wave_lengths, ids, labels, paddings
 
 
 class FeatureCollate(object):
-    def __init__(self, tokenizer, maxlen):
+    def __init__(self, tokenizer, maxlen, no_eos=False):
         self.tokenizer = tokenizer
         self.maxlen = maxlen
-        return
+        self.no_eos = no_eos
 
     def __call__(self, batch):
         utts = [d["utt"] for d in batch]
@@ -257,8 +260,9 @@ class FeatureCollate(object):
         timer.tic()
         rawids_list = [self.tokenizer.encode(t) for t in trans]
         ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
-                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM))
+                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.no_eos)
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
+
         return utts, padded_features, feature_lengths, ids, labels, paddings
 
 

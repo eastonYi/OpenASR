@@ -7,6 +7,7 @@ data:
   fetchworker_num: 12
 model:
   type: CIF
+  no_eos: True
   signal:
     feature_type: fbank
     sample_rate: 16000

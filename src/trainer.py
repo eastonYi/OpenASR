@@ -35,6 +35,8 @@ class Trainer(object):
         else:
             self.model_to_pack = self.model
 
+        self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+
         self.num_epoch = config["num_epoch"]
         self.exp_dir = config["exp_dir"]
         self.print_inteval = config["print_inteval"]
@@ -167,17 +169,17 @@ class Trainer(object):
 
             if cross_valid:
                 with torch.no_grad():
-                    this_loss = self.model(padded_waveforms.cuda(),
-                            wave_lengths.long().cuda(),
-                            ids.long().cuda(),
-                            labels.long().cuda(),
-                            paddings.long().cuda())
+                    this_loss = self.model(padded_waveforms.to(self.device),
+                            wave_lengths.long().to(self.device),
+                            ids.long().to(self.device),
+                            labels.long().to(self.device),
+                            paddings.long().to(self.device))
             else:
-                this_loss = self.model(padded_waveforms.cuda(),
-                        wave_lengths.long().cuda(),
-                        ids.long().cuda(),
-                        labels.long().cuda(),
-                        paddings.long().cuda(),
+                this_loss = self.model(padded_waveforms.to(self.device),
+                        wave_lengths.long().to(self.device),
+                        ids.long().to(self.device),
+                        labels.long().to(self.device),
+                        paddings.long().to(self.device),
                         label_smooth=self.label_smooth)
 
             batch_loss = torch.sum(this_loss)
@@ -224,6 +226,127 @@ class Trainer(object):
                 logging.info("Progress:\n" + msg.strip())
 
         self.metric_summarizer.reset_metrics()
+        torch.cuda.empty_cache()
+        time.sleep(2)
+        return (tot_loss/tot_token).item()
+
+
+class CIF_Trainer(Trainer):
+    def __init__ (self, model, config, tr_loader, cv_loader):
+        self.config = config
+        self.tr_loader = tr_loader
+        self.cv_loader = cv_loader
+
+        self.model = model
+        if config["multi_gpu"] == True:
+            self.model_to_pack = self.model.module
+        else:
+            self.model_to_pack = self.model
+
+        self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+
+        self.num_epoch = config["num_epoch"]
+        self.exp_dir = config["exp_dir"]
+        self.print_inteval = config["print_inteval"]
+
+        self.accumulate_grad_batch = config["accumulate_grad_batch"]
+        self.init_lr = config["init_lr"]
+        self.grad_max_norm = config["grad_max_norm"]
+        self.label_smooth = config["label_smooth"]
+
+        self.num_last_ckpt_keep = None
+        if "num_last_ckpt_keep" in config:
+            self.num_last_ckpt_keep = config["num_last_ckpt_keep"]
+
+        self.lr_scheduler = schedule.get_scheduler(config["lr_scheduler"])
+
+        # trainer state
+        self.epoch = 0
+        self.step = 0
+        self.tr_loss = []
+        self.cv_loss = []
+        self.lr = self.init_lr
+
+        if config["optimtype"] == "sgd":
+            self.optimizer = torch.optim.SGD(self.model_to_pack.parameters(), lr=self.lr, momentum=0.9)
+        elif config["optimtype"] == "adam":
+            self.optimizer = torch.optim.Adam(self.model_to_pack.parameters(), lr=self.lr,
+                betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        else:
+            raise ValueError("Unknown optimizer.")
+        if not os.path.isdir(self.exp_dir):
+            os.makedirs(self.exp_dir)
+
+    def iter_one_epoch(self, cross_valid=False):
+
+        if cross_valid:
+            loader = self.cv_loader
+            self.model.eval()
+        else:
+            loader = self.tr_loader
+            self.model.train()
+
+        timer = utils.Timer()
+        timer.tic()
+        tot_loss = 0.
+        tot_token = 0
+        tot_sequence = 0
+
+        n_accu_batch = self.accumulate_grad_batch
+
+        tot_iter_num = len(loader)
+        for niter, data in enumerate(loader):
+            niter += 1
+            utts, padded_waveforms, wave_lengths, ids, labels, paddings = data
+
+            if cross_valid:
+                with torch.no_grad():
+                    qua_loss, ce_loss = self.model(padded_waveforms.to(self.device),
+                            wave_lengths.long().to(self.device),
+                            ids.long().to(self.device),
+                            labels.long().to(self.device),
+                            paddings.long().to(self.device))
+            else:
+                qua_loss, ce_loss = self.model(padded_waveforms.to(self.device),
+                        wave_lengths.long().to(self.device),
+                        ids.long().to(self.device),
+                        labels.long().to(self.device),
+                        paddings.long().to(self.device),
+                        label_smooth=self.label_smooth)
+
+            n_token = torch.sum(1-paddings).float()
+            tot_token += n_token
+            n_sequence = len(utts)
+            tot_sequence += n_sequence
+
+            loss = (qua_loss + ce_loss).sum() / n_token
+            tot_loss += ce_loss
+
+            # compute gradients
+            if not cross_valid:
+                if n_accu_batch == self.accumulate_grad_batch:
+                    self.optimizer.zero_grad()
+                loss.backward()
+                n_accu_batch -= 1
+                if n_accu_batch == 0 or niter == tot_iter_num:
+                    self.step += 1  # to be consistant with metric
+                    clip_grad_norm_(self.model.parameters(), self.grad_max_norm)
+                    self.lr_scheduler.step()   # then, update learning rate
+                    self.lr_scheduler.set_lr(self.optimizer, self.init_lr)
+                    self.optimizer.step()
+                    n_accu_batch = self.accumulate_grad_batch
+                else:
+                    continue
+
+            timer.toc()
+            if niter % self.print_inteval == 0:
+                print('per_token_loss: {:.3f} avg_token_ce_loss: {:.3f} learning_rate: {:.3e} sequence_per_sec: {:.3f}'.format(
+                    loss, tot_loss / tot_token, list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
+                ), flush=True)
+
+                print("Epoch {} | Step {} | Iter {}:\n".format(self.epoch, self.step, niter),
+                      flush=True)
+
         torch.cuda.empty_cache()
         time.sleep(2)
         return (tot_loss/tot_token).item()

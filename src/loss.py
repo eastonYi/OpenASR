@@ -7,6 +7,7 @@ def cal_qua_loss(_number, number):
 
     return qua_loss
 
+
 def cal_ce_loss(logits, target_labels, target_paddings, label_smooth):
     losses = _compute_cross_entropy_losses(logits, target_labels, target_paddings)
     loss = losses.sum()
@@ -26,6 +27,8 @@ def _uniform_label_smooth(logits, paddings):
 
 def _compute_cross_entropy_losses(logits, labels, paddings):
     B, T, V = logits.shape
-    losses = F.cross_entropy(logits.view(-1, V), labels.view(-1), reduction="none").view(B, T) * (1-paddings).float()
+    losses = F.cross_entropy(logits.contiguous().view(-1, V),
+                             labels.contiguous().view(-1),
+                             reduction="none").view(B, T) * (1-paddings).float()
 
     return losses

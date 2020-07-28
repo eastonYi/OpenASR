@@ -35,8 +35,6 @@ else:
 import utils
 import data
 
-from trainer import Trainer
-
 
 def get_args():
     parser = argparse.ArgumentParser(description="""
@@ -54,7 +52,7 @@ if __name__ == "__main__":
     args = get_args()
     timer.tic()
     with open(args.config) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
+        config = yaml.load(f)
     dataconfig = config["data"]
     trainingconfig = config["training"]
     modelconfig = config["model"]
@@ -64,9 +62,9 @@ if __name__ == "__main__":
 
     tokenizer = data.CharTokenizer(dataconfig["vocab_path"])
     if modelconfig['signal']["feature_type"] == 'offline':
-        collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"])
+        collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"])
     else:
-        collate = data.WaveCollate(tokenizer, dataconfig["maxlen"])
+        collate = data.WaveCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"])
 
     ngpu = 1
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
@@ -79,11 +77,13 @@ if __name__ == "__main__":
     cv_loader = torch.utils.data.DataLoader(valid_set,
         collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
-    if config.type == 'conv-transformer':
+    if modelconfig['type'] == 'conv-transformer':
         import sp_layers
         import encoder_layers
         import decoder_layers
         from models import Conv_Transformer as Model
+
+        from trainer import Trainer
 
         splayer = sp_layers.SPLayer(modelconfig["signal"])
         encoder = encoder_layers.Transformer(modelconfig["encoder"])
@@ -92,18 +92,20 @@ if __name__ == "__main__":
 
         model = Model(splayer, encoder, decoder)
 
-    elif config.type == 'CIF':
+    elif modelconfig['type'] == 'CIF':
         import sp_layers
         import encoder_layers
         import attention_assigner
         import decoder_layers
         from models import CIF as Model
 
+        from trainer import CIF_Trainer as Trainer
+
         splayer = sp_layers.SPLayer(modelconfig["signal"])
         encoder = encoder_layers.Transformer(modelconfig["encoder"])
         assigner = attention_assigner.Attention_Assigner(modelconfig["assigner"])
         modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
-        decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
+        decoder = decoder_layers.CIF_Decoder(modelconfig["decoder"])
 
         model = Model(splayer, encoder, assigner, decoder)
 
@@ -118,7 +120,7 @@ if __name__ == "__main__":
         logging.info("Let's use {} GPUs!".format(torch.cuda.device_count()))
         model = torch.nn.DataParallel(model)
 
-    model = model.cuda()
+    # model = model.cuda()
 
     trainer = Trainer(model, trainingconfig, tr_loader, cv_loader)
 

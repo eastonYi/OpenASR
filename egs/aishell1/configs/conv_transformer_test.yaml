@@ -1,8 +1,8 @@
 continue_training:
 data:
-  trainset: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/train.json
-  devset: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/dev.json
-  vocab_path: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/aishell1_train_chars.txt
+  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1/data/test_small.json
+  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1/data/test_small.json
+  vocab_path: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1/data/aishell1_train_chars.txt
   maxlen: 60
   fetchworker_num: 12
 model:

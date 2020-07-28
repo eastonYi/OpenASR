@@ -1,13 +1,13 @@
-continue_training:
+# continue_training:
 data:
-  trainset: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/train.json
-  devset: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/dev.json
-  vocab_path: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/aishell1_train_chars.txt
+  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1/data/test_small.json
+  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1/data/test_small.json
+  vocab_path: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1/data/aishell1_train_chars.txt
   maxlen: 60
-  fetchworker_num: 12
+  fetchworker_num: 2
 model:
-  type: conv-transformer
-  no_eos: False
+  type: CIF
+  no_eos: True
   signal:
     feature_type: fbank
     sample_rate: 16000
@@ -30,6 +30,11 @@ model:
     activation: "glu"
     num_layers: 6
     dropout_rate: 0.1
+  assigner:
+    d_model: 512
+    n_layers: 1
+    w_context: 3
+    dropout: 0.1
   decoder:
     type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer

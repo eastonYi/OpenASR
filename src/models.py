@@ -198,7 +198,7 @@ class Conv_Transformer(torch.nn.Module):
 
 class CIF(Conv_Transformer):
     def __init__(self, splayer, encoder, assigner, decoder):
-        super().__init__()
+        torch.nn.Module.__init__(self)
         self.splayer = splayer
         self.encoder = encoder
         self.assigner = assigner
@@ -226,9 +226,8 @@ class CIF(Conv_Transformer):
 
         qua_loss = cal_qua_loss(_num, num)
         ce_loss = cal_ce_loss(logits, target_labels, target_paddings, label_smooth)
-        loss = qua_loss + ce_loss
 
-        return loss
+        return qua_loss, ce_loss
 
     def cif(self, hidden, alphas, threshold, log=False):
         device = hidden.device
@@ -274,7 +273,7 @@ class CIF(Conv_Transformer):
         for b in range(batch_size):
             fire = fires[b, :]
             l = torch.index_select(frames[b, :, :], 0, torch.where(fire > threshold)[0])
-            pad_l = torch.zeros([max_label_len - l.size(0), hidden_size]).cuda()
+            pad_l = torch.zeros([max_label_len - l.size(0), hidden_size]).to(device)
             list_ls.append(torch.cat([l, pad_l], 0))
 
         if log:

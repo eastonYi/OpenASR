@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 
-from conv_layers import Conv1dSubsample as Conv1d
+from conv_layers import Conv1d
 from utils import sequence_mask
 
 
@@ -11,6 +11,7 @@ class Attention_Assigner(nn.Module):
     def __init__(self, config):
         super().__init__()
         # parameters
+        self.config = config
         self.d_input = config['d_model']
         self.d_model = config['d_model']
         self.n_layers = config['n_layers']
