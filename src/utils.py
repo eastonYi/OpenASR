@@ -123,6 +123,16 @@ class Timer(object):
 # auxilary functions for sequence
 # ==========================================
 
+def sequence_mask(lengths, maxlen=None, dtype=torch.float):
+    if maxlen is None:
+        maxlen = lengths.max()
+    mask = torch.ones((len(lengths), maxlen),
+                      device=lengths.device,
+                      dtype=torch.uint8).cumsum(dim=1) <= lengths.unsqueeze(0).t()
+
+    return mask.type(dtype)
+
+
 def get_paddings(src, lengths):
     paddings = torch.zeros_like(src).to(src.device)
     for b in range(lengths.shape[0]):

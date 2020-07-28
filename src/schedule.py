@@ -97,7 +97,6 @@ class LinearLearningRateSchedule(BaseLearningRateSchedule):
     def check_misc_state(self):
         pass
 
-
     def update_decay_rate(self):
         self.decay_rate = compute_linear_intep(self.step_num, self.config["x0"],
             self.config["y0"], self.config["x1"], self.config["y1"])

@@ -27,7 +27,7 @@ import data
 import sp_layers
 import encoder_layers
 import decoder_layers
-import models
+from models import Conv_Transformer as Model
 
 
 def get_args():
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     encoder = encoder_layers.Transformer(pkg["model"]["encoder_config"])
     decoder = decoder_layers.TransformerDecoder(pkg["model"]["decoder_config"])
 
-    model = models.Model(splayer, encoder, decoder)
+    model = Model(splayer, encoder, decoder)
     logging.info("\nModel info:\n{}".format(model))
     model.restore(pkg["model"])
     if args.use_gpu:

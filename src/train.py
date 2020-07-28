@@ -37,7 +37,7 @@ import data
 import sp_layers
 import encoder_layers
 import decoder_layers
-import models
+from models import Conv_Transformer as Model
 
 from trainer import Trainer
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     training_set = data.SpeechDataset(dataconfig["trainset"])
     valid_set = data.SpeechDataset(dataconfig["devset"], reverse=True)
-    
+
     tokenizer = data.CharTokenizer(dataconfig["vocab_path"])
     if modelconfig['signal']["feature_type"] == 'offline':
         collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"])
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
     decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
 
-    model = models.Model(splayer, encoder, decoder)
+    model = Model(splayer, encoder, decoder)
     logging.info("\nModel info:\n{}".format(model))
 
     if args.continue_training:
