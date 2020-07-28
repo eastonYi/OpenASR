@@ -114,7 +114,7 @@ class SpeechDataset(data.Dataset):
 
 class KaldiDataset(data.Dataset):
     def __init__(self, data_dir, tag="file"):
-        super(KaldiDataset, self).__init__()
+        super().__init__()
         self.data = []
         if os.path.exists(os.path.join(data_dir, 'feats.scp')):
             p = os.path.join(data_dir, 'feats.scp')

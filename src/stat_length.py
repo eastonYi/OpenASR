@@ -13,18 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import sys
 import os
 import argparse
 import logging
-import yaml
 import numpy as np
-import torch
+import data
+
 
 if "LAS_LOG_LEVEL" in os.environ:
     LOG_LEVEL = os.environ["LAS_LOG_LEVEL"]
 else:
-    LOG_LEVEL = "INFO" 
+    LOG_LEVEL = "INFO"
 if LOG_LEVEL == "DEBUG":
     logging.basicConfig(
         level=logging.DEBUG,
@@ -33,9 +32,6 @@ else:
      logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s')
-
-import utils
-import data
 
 
 def get_args():
@@ -52,21 +48,18 @@ if __name__ == "__main__":
     vocab_path = args.vocab_file
     data_path = args.data
     training_set = data.SpeechDataset(data_path)
-    if vocab_path.endswith(".model"):
-        tokenizer = data.WpmTokenizer(vocab_path)
-    else:
-        tokenizer = data.CharTokenizer(vocab_path)
- 
+    tokenizer = data.CharTokenizer(vocab_path)
+
     durs = []
     id_lengths = []
     for d in iter(training_set):
         durs.append(d["duration"])
-        ids = tokenizer.encode(d["transcript"]) 
+        ids = tokenizer.encode(d["transcript"])
         #print(ids)
         id_lengths.append(len(ids))
     durs = np.array(durs)
     id_lengths = np.array(id_lengths).astype(np.float)
-    dur_percentile = np.percentile(durs, [10, 50, 90]) 
+    dur_percentile = np.percentile(durs, [10, 50, 90])
     dur_max = np.max(durs)
     dur_min = np.min(durs)
     dur_mean = np.mean(durs)

@@ -29,9 +29,9 @@ def get_args():
      Usage: prepare_data.py <data_dir> <dest_path>""")
     parser.add_argument("data_dir", help="data directory")
     parser.add_argument("dest_path", help="path to dest")
-    parser.add_argument("--tag", type=str, default="file", 
+    parser.add_argument("--tag", type=str, default="file",
             help="tag of path. It should be file, pipe, or ark.")
-    parser.add_argument("--maxdur", type=float, default=9e9, 
+    parser.add_argument("--maxdur", type=float, default=9e9,
             help="if the duration is longer than maxdur, drop it.")
     args = parser.parse_args()
     return args
@@ -44,13 +44,13 @@ def get_dur(wav_dic):
         dur = data.shape[0]/float(sample_rate)
         durdic[key] = dur
     return durdic
-    
+
 
 if __name__ == "__main__":
     args = get_args()
     datadir = args.data_dir
     fw = args.dest_path
-    logging.info("Preparing data for {}...".format(datadir)) 
+    logging.info("Preparing data for {}...".format(datadir))
     if os.path.exists(os.path.join(datadir, "wav.scp")):
         logging.info("wav.scp exists. Use it.")
         wav_dic = utils.parse_scp(os.path.join(datadir, "wav.scp"))
@@ -86,7 +86,7 @@ if __name__ == "__main__":
             logging.warn("{} is longer than {}s, skip it.".format(utt, dur_dic[utt]))
             n_durskip += 1
             continue
-        else: 
+        else:
             towrite.append({
                 "utt": utt,
                 "path": wav_dic[utt],
@@ -98,12 +98,3 @@ if __name__ == "__main__":
         json.dump(towrite, f, ensure_ascii=False, indent=2)
     logging.info("\nProcessed {} utterances successfully. "
             "The total number is {}. ({:2%}) {} utterances are too long.".format(n_success, n_tot, 1.*n_success/n_tot, n_durskip))
-
-
-
-
-
-
-
-
-

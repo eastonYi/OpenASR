@@ -2,6 +2,7 @@ import math
 import torch
 import torch.nn as nn
 
+
 class PositionalEncoding(nn.Module):
     """Implement the positional encoding (PE) function.
 
@@ -10,7 +11,7 @@ class PositionalEncoding(nn.Module):
     """
 
     def __init__(self, d_model, max_len=5000):
-        super(PositionalEncoding, self).__init__()
+        super().__init__()
         # Compute the positional encodings once in log space.
         self.scale = d_model**0.5
         pe = torch.zeros(max_len, d_model, requires_grad=False)
@@ -28,6 +29,5 @@ class PositionalEncoding(nn.Module):
             input: N x T x D
         """
         length = input.size(1)
+        
         return input*(self.scale)+self.pe[:, :length]
-
-

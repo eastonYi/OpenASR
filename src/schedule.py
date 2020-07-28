@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import logging
-import torch
-import math
 
 
 def get_scheduler(config):
@@ -31,7 +29,7 @@ def get_scheduler(config):
         raise ValueError("Unknown scheduler.")
 
 
-class BaseLearningRateSchedule(object): 
+class BaseLearningRateSchedule(object):
     def __init__(self):
         self.step_num = 0
         self.decay_rate = 1.
@@ -46,8 +44,8 @@ class BaseLearningRateSchedule(object):
     def step(self):
         self.step_num += 1
         if self.update_only_with_step:
-            self.update_decay_rate()    
-            
+            self.update_decay_rate()
+
     def pack_state(self):
         pkg = {
             "step": self.step_num,
@@ -55,11 +53,11 @@ class BaseLearningRateSchedule(object):
             "misc_state": self.misc_state
             }
         return pkg
-        
+
     def restore_state(self, pkg):
         self.step_num = pkg['step']
         self.decay_rate = pkg['decay_rate']
-        self.misc_state = pkg['misc_state'] 
+        self.misc_state = pkg['misc_state']
         self.check_misc_state()
 
     def check_misc_state(self):
@@ -67,8 +65,8 @@ class BaseLearningRateSchedule(object):
 
     def update_decay_rate(self):
         raise NotImplementedError()
-    
-    
+
+
 def compute_polynomial_intep(x, x0, y0, x1, y1, power):
     if x < x0:
         return y0
@@ -76,7 +74,7 @@ def compute_polynomial_intep(x, x0, y0, x1, y1, power):
         return y1
     else:
         if power != 1.0:
-            f = ((1.0 * x - x0) / (x1 - x0)) ** power      
+            f = ((1.0 * x - x0) / (x1 - x0)) ** power
         else:
             f = ((1.0 * x - x0) / (x1 - x0))
         y = y0 + f * (y1 - y0)
@@ -87,7 +85,7 @@ def compute_linear_intep(x, x0, y0, x1, y1):
     return compute_polynomial_intep(x, x0, y0, x1, y1, 1.0)
 
 
-class LinearLearningRateSchedule(BaseLearningRateSchedule):    
+class LinearLearningRateSchedule(BaseLearningRateSchedule):
     def __init__(self, conf):
         super(LinearLearningRateSchedule, self).__init__()
         self.config = {
@@ -99,42 +97,42 @@ class LinearLearningRateSchedule(BaseLearningRateSchedule):
     def check_misc_state(self):
         pass
 
-   
-    def update_decay_rate(self):
-        self.decay_rate = compute_linear_intep(self.step_num, self.config["x0"], 
-            self.config["y0"], self.config["x1"], self.config["y1"])    
 
-         
-class WarmupLinearLearningRateSchedule(LinearLearningRateSchedule):    
+    def update_decay_rate(self):
+        self.decay_rate = compute_linear_intep(self.step_num, self.config["x0"],
+            self.config["y0"], self.config["x1"], self.config["y1"])
+
+
+class WarmupLinearLearningRateSchedule(LinearLearningRateSchedule):
     def __init__(self, conf):
         super(WarmupLinearLearningRateSchedule, self).__init__(conf)
         self.config["warmup_step"] = conf["warmup_step"]
-                
+
     def update_decay_rate(self):
-        dc0 = compute_linear_intep(self.step_num, 0, 
+        dc0 = compute_linear_intep(self.step_num, 0,
             0, self.config["warmup_step"], self.config["y0"])
-        dc1 = compute_linear_intep(self.step_num, self.config["x0"], 
+        dc1 = compute_linear_intep(self.step_num, self.config["x0"],
             self.config["y0"], self.config["x1"], self.config["y1"])
-        self.decay_rate = min(dc0, dc1)  
+        self.decay_rate = min(dc0, dc1)
 
 
-class WarmupTransformerLearningRateSchedule(BaseLearningRateSchedule):    
+class WarmupTransformerLearningRateSchedule(BaseLearningRateSchedule):
     def __init__(self, conf):
         super(WarmupTransformerLearningRateSchedule, self).__init__()
         self.config = {}
         self.config["warmup_step"] = conf["warmup_step"]
-        self.config["d_model"] = conf["d_model"]      
+        self.config["d_model"] = conf["d_model"]
 
     def update_decay_rate(self):
         d0 = self.step_num**(-0.5)
         d1 = self.step_num*(self.config["warmup_step"]**(-1.5))
-        self.decay_rate = (self.config["d_model"]**(-0.5))*min(d0, d1)  
+        self.decay_rate = (self.config["d_model"]**(-0.5))*min(d0, d1)
 
     def check_misc_state(self):
         pass
 
 
-class BobLearningRateSchedule(BaseLearningRateSchedule):    
+class BobLearningRateSchedule(BaseLearningRateSchedule):
     def __init__(self, conf):
         super(BobLearningRateSchedule, self).__init__()
         self.update_only_with_step = False
@@ -146,18 +144,18 @@ class BobLearningRateSchedule(BaseLearningRateSchedule):
                 "last_loss": -1,
                 "last_decay_rate": 1,
             }
-    
-    def update_decay_rate(self, this_loss): 
+
+    def update_decay_rate(self, this_loss):
         improvement = (self.misc_state["last_loss"] - this_loss)/self.misc_state["last_loss"]
         if improvement < self.config["tolerate"]:
             logging.info(("Improvment {:.4f} is smaller than tolerate {:.4f},"
                 " decay LR.").format(improvement, self.config["tolerate"]))
-            new_decay_rate = self.misc_state["last_decay_rate"] * self.config["decay_coef"] 
+            new_decay_rate = self.misc_state["last_decay_rate"] * self.config["decay_coef"]
             self.decay_rate = new_decay_rate
-            self.misc_state["last_decay_rate"] = new_decay_rate 
-        self.misc_state["last_loss"] = this_loss     
+            self.misc_state["last_decay_rate"] = new_decay_rate
+        self.misc_state["last_loss"] = this_loss
 
     def check_misc_state(self):
-        if (not "last_loss" in self.misc_state or  
+        if (not "last_loss" in self.misc_state or
             not "last_decay_rate" in self.misc_state):
             raise ValueError("The misc states are not match. Maybe the package was not trained with Bob lr schedule.")

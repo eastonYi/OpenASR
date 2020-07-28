@@ -10,6 +10,7 @@ from third_party import kaldi_io as kio
 
 TENSORBOARD_LOGGING = 0
 
+
 def cleanup_ckpt(expdir, num_last_ckpt_keep):
     ckptlist = [t for t in os.listdir(expdir) if t.endswith('.pt') and t != 'last-ckpt.pt']
     ckptlist = sorted(ckptlist)
