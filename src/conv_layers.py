@@ -1,7 +1,49 @@
 from collections import OrderedDict
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn.modules.normalization import LayerNorm
+
+
+class Conv1d(nn.Module):
+    # the same as stack frames
+    def __init__(self, d_input, d_hidden, n_layers, w_context, pad='same', name=''):
+        super().__init__()
+        assert n_layers >= 1
+        self.n_layers = n_layers
+        self.d_input = d_input
+        self.d_hidden = d_hidden
+        self.w_context = w_context
+        self.pad = pad
+        self.name = name
+
+        layers = [("{}/conv1d_0".format(name), nn.Conv1d(d_input, d_hidden, w_context, 1)),
+                  ("{}/relu_0".format(name), nn.ReLU())]
+        for i in range(n_layers-1):
+            layers += [
+                ("{}/conv1d_{}".format(name, i+1), nn.Conv1d(d_hidden, d_hidden, w_context, 1)),
+                ("{}/relu_{}".format(name, i+1), nn.ReLU())
+            ]
+        layers = OrderedDict(layers)
+        self.conv = nn.Sequential(layers)
+
+    def forward(self, feats, feat_lengths):
+        if self.pad == 'same':
+            input_length = feats.size(1)
+            feats = F.pad(feats, (0, 0, 0, self.n_layers * self.w_context))
+        outputs = self.conv(feats.permute(0, 2, 1))
+        outputs = outputs.permute(0, 2, 1)
+
+        if self.pad == 'same':
+            tensor_length = input_length
+            assert tensor_length <= outputs.size(1)
+            outputs = outputs[:, :tensor_length, :]
+            output_lengths = feat_lengths
+        else:
+            output_lengths = ((feat_lengths + sum(self.padding) -
+                               1*(self.w_context-1)-1)/self.subsample + 1).long()
+
+        return outputs, output_lengths
 
 
 class Conv1dSubsample(torch.nn.Module):
@@ -19,7 +61,7 @@ class Conv1dSubsample(torch.nn.Module):
         outputs = outputs.permute(0, 2, 1)
         outputs = self.conv_norm(outputs)
         output_lengths = ((feat_lengths - 1*(self.w_context-1)-1)/self.subsample + 1).long()
-        
+
         return outputs, output_lengths
 
 

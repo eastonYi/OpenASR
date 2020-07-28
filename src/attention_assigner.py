@@ -8,18 +8,19 @@ from utils import sequence_mask
 class Attention_Assigner(nn.Module):
     """atteniton assigner of CIF including self-attention and feed forward.
     """
-    def __init__(self, d_input, d_hidden, w_context, n_layers, dropout=0.1):
+    def __init__(self, config):
         super().__init__()
         # parameters
-        self.d_input = d_input
-        self.d_hidden = d_hidden
-        self.n_layers = n_layers
-        self.w_context = w_context
+        self.d_input = config['d_model']
+        self.d_model = config['d_model']
+        self.n_layers = config['n_layers']
+        self.w_context = config['w_context']
+        self.dropout_rate = config['dropout']
 
-        self.conv = Conv1d(d_input, d_hidden, n_layers, w_context,
+        self.conv = Conv1d(self.d_input, self.d_model, self.n_layers, self.w_context,
                            pad='same', name='assigner')
-        self.dropout = nn.Dropout(p=dropout)
-        self.linear = nn.Linear(d_hidden, 1)
+        self.dropout = nn.Dropout(p=self.dropout_rate)
+        self.linear = nn.Linear(self.d_model, 1)
 
     def forward(self, padded_input, input_lengths):
         """

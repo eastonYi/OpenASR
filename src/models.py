@@ -18,6 +18,8 @@ import torch
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
 
+from loss import cal_ce_loss, cal_qua_loss
+
 
 class Conv_Transformer(torch.nn.Module):
     def __init__(self, splayer, encoder, decoder):
@@ -31,23 +33,9 @@ class Conv_Transformer(torch.nn.Module):
         target_lengths = torch.sum(1-target_paddings, dim=-1).long()
         logits = self.get_logits(batch_wave, lengths,
                 target_ids, target_lengths)
-        losses = self._compute_cross_entropy_losses(logits, target_labels, target_paddings)
-        loss = torch.sum(losses)
-        if label_smooth > 0:
-            loss = loss*(1-label_smooth) + self._uniform_label_smooth(logits, target_paddings)*label_smooth
+        loss = cal_ce_loss(logits, target_labels, target_paddings, label_smooth)
 
         return loss
-
-    def _uniform_label_smooth(self, logits, paddings):
-        log_probs = F.log_softmax(logits, dim=-1)
-        nlabel = log_probs.shape[-1]
-        ent_uniform = -torch.sum(log_probs, dim=-1)/nlabel
-        return torch.sum(ent_uniform*(1-paddings).float())
-
-    def _compute_cross_entropy_losses(self, logits, labels, paddings):
-        B, T, V = logits.shape
-        losses = F.cross_entropy(logits.view(-1, V), labels.view(-1), reduction="none").view(B, T) * (1-paddings).float()
-        return losses
 
     def get_logits(self, batch_wave, lengths, target_ids, target_lengths):
         encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
@@ -209,41 +197,90 @@ class Conv_Transformer(torch.nn.Module):
 
 
 class CIF(Conv_Transformer):
-    def __init__(self, splayer, encoder, decoder):
+    def __init__(self, splayer, encoder, assigner, decoder):
         super().__init__()
         self.splayer = splayer
         self.encoder = encoder
+        self.assigner = assigner
         self.decoder = decoder
         self._reset_parameters()
 
-    def forward(self, batch_wave, lengths, target_ids, target_labels=None, target_paddings=None, label_smooth=0.):
+    def forward(self, batch_wave, lengths, target_ids, target_labels=None, target_paddings=None, label_smooth=0., threshold=0.95):
+        device = batch_wave.device
         target_lengths = torch.sum(1-target_paddings, dim=-1).long()
-        logits = self.get_logits(batch_wave, lengths,
-                target_ids, target_lengths)
-        losses = self._compute_cross_entropy_losses(logits, target_labels, target_paddings)
-        loss = torch.sum(losses)
-        if label_smooth > 0:
-            loss = loss*(1-label_smooth) + self._uniform_label_smooth(logits, target_paddings)*label_smooth
+
+        encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
+        encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
+        alphas = self.assigner(encoder_outputs, encoder_output_lengths)
+
+        # sum
+        _num = alphas.sum(-1)
+        # scaling
+        num = (target_labels > 0).float().sum(-1)
+        num_noise = num + torch.rand(alphas.size(0)).to(device) - 0.5
+        alphas *= (num_noise / _num)[:, None].repeat(1, alphas.size(1))
+
+        cif_outputs = self.cif(encoder_outputs, alphas, threshold=threshold)
+
+        logits = self.decoder(cif_outputs, target_ids, target_lengths)
+
+        qua_loss = cal_qua_loss(_num, num)
+        ce_loss = cal_ce_loss(logits, target_labels, target_paddings, label_smooth)
+        loss = qua_loss + ce_loss
 
         return loss
 
-    def _uniform_label_smooth(self, logits, paddings):
-        log_probs = F.log_softmax(logits, dim=-1)
-        nlabel = log_probs.shape[-1]
-        ent_uniform = -torch.sum(log_probs, dim=-1)/nlabel
-        return torch.sum(ent_uniform*(1-paddings).float())
+    def cif(self, hidden, alphas, threshold, log=False):
+        device = hidden.device
+        batch_size, len_time, hidden_size = hidden.size()
 
-    def _compute_cross_entropy_losses(self, logits, labels, paddings):
-        B, T, V = logits.shape
-        losses = F.cross_entropy(logits.view(-1, V), labels.view(-1), reduction="none").view(B, T) * (1-paddings).float()
-        return losses
+        # loop varss
+        integrate = torch.zeros([batch_size]).to(device)
+        frame = torch.zeros([batch_size, hidden_size]).to(device)
+        # intermediate vars along time
+        list_fires = []
+        list_frames = []
 
-    def get_logits(self, batch_wave, lengths, target_ids, target_lengths):
-        encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
-        encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
-        outputs = self.decoder(encoder_outputs, encoder_output_lengths, target_ids, target_lengths)
+        for t in range(len_time):
+            alpha = alphas[:, t]
+            distribution_completion = torch.ones([batch_size]).to(device) - integrate
 
-        return outputs
+            integrate += alpha
+            list_fires.append(integrate)
+
+            fire_place = integrate > threshold
+            integrate = torch.where(fire_place,
+                                    integrate - torch.ones([batch_size]).to(device),
+                                    integrate)
+            cur = torch.where(fire_place,
+                              distribution_completion,
+                              alpha)
+            remainds = alpha - cur
+
+            frame += cur[:, None] * hidden[:, t, :]
+            list_frames.append(frame)
+            frame = torch.where(fire_place[:, None].repeat(1, hidden_size),
+                                remainds[:, None] * hidden[:, t, :],
+                                frame)
+            if log:
+                print('t: {}\t{:.3f} -> {:.3f}|{:.3f}'.format(
+                    t, integrate[0].numpy(), cur[0].numpy(), remainds[0].numpy()))
+
+        fires = torch.stack(list_fires, 1)
+        frames = torch.stack(list_frames, 1)
+        list_ls = []
+        len_labels = torch.round(alphas.sum(-1)).int()
+        max_label_len = len_labels.max()
+        for b in range(batch_size):
+            fire = fires[b, :]
+            l = torch.index_select(frames[b, :, :], 0, torch.where(fire > threshold)[0])
+            pad_l = torch.zeros([max_label_len - l.size(0), hidden_size]).cuda()
+            list_ls.append(torch.cat([l, pad_l], 0))
+
+        if log:
+            print('fire:\n', fires.numpy())
+
+        return torch.stack(list_ls, 0)
 
     def decode(self, batch_wave, lengths, nbest_keep, sosid=1, eosid=2, maxlen=100):
         if type(nbest_keep) != int:
@@ -257,6 +294,7 @@ class CIF(Conv_Transformer):
     def _get_acoustic_representations(self, batch_wave, lengths):
         encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
         encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
+
         return encoder_outputs, encoder_output_lengths
 
     def _beam_search(self, encoder_outputs, encoder_output_lengths, nbest_keep, sosid, eosid, maxlen):
@@ -323,6 +361,7 @@ class CIF(Conv_Transformer):
                 l = min(item[0].shape[0], target_ids[i, j].shape[0])
                 target_ids[i, j, :l] = item[0][:l]
                 scores[i, j] = item[1]
+
         return target_ids, scores
 
     def _decode_single_step(self, encoder_outputs, encoder_output_lengths, target_ids, target_lengths, accumu_scores, finished_sel=None):
@@ -357,6 +396,7 @@ class CIF(Conv_Transformer):
         nbest_logprobs = topk_res[0]  # [B, nbest_keep]
         nbest_ids = topk_res[1] % vocab_size # [B, nbest_keep]
         beam_from = (topk_res[1] / vocab_size).long()
+
         return nbest_ids, nbest_logprobs, beam_from
 
     def package(self):
@@ -365,6 +405,8 @@ class CIF(Conv_Transformer):
             "splayer_state": self.splayer.state_dict(),
             "encoder_config": self.encoder.config,
             "encoder_state": self.encoder.state_dict(),
+            "assigner_config": self.assigner.config,
+            "assigner_state": self.assigner.state_dict(),
             "decoder_config": self.decoder.config,
             "decoder_state": self.decoder.state_dict(),
              }
@@ -382,6 +424,10 @@ class CIF(Conv_Transformer):
             if (key != "dropout_rate" and
                     self.encoder.config[key] != pkg["encoder_config"][key]):
                 raise ValueError("encoder_config mismatch.")
+        for key in self.assigner.config.keys():
+            if (key != "dropout_rate" and
+                    self.assigner.config[key] != pkg["assigner_config"][key]):
+                raise ValueError("assigner_config mismatch.")
         for key in self.decoder.config.keys():
             if (key != "dropout_rate" and
                     self.decoder.config[key] != pkg["decoder_config"][key]):
@@ -389,6 +435,7 @@ class CIF(Conv_Transformer):
 
         self.splayer.load_state_dict(pkg["splayer_state"])
         self.encoder.load_state_dict(pkg["encoder_state"])
+        self.assigner.load_state_dict(pkg["assigner_state"])
         self.decoder.load_state_dict(pkg["decoder_state"])
 
     def _reset_parameters(self):

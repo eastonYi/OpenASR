@@ -34,10 +34,6 @@ else:
 
 import utils
 import data
-import sp_layers
-import encoder_layers
-import decoder_layers
-from models import Conv_Transformer as Model
 
 from trainer import Trainer
 
@@ -83,12 +79,34 @@ if __name__ == "__main__":
     cv_loader = torch.utils.data.DataLoader(valid_set,
         collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
-    splayer = sp_layers.SPLayer(modelconfig["signal"])
-    encoder = encoder_layers.Transformer(modelconfig["encoder"])
-    modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
-    decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
+    if config.type == 'conv-transformer':
+        import sp_layers
+        import encoder_layers
+        import decoder_layers
+        from models import Conv_Transformer as Model
 
-    model = Model(splayer, encoder, decoder)
+        splayer = sp_layers.SPLayer(modelconfig["signal"])
+        encoder = encoder_layers.Transformer(modelconfig["encoder"])
+        modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
+        decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
+
+        model = Model(splayer, encoder, decoder)
+
+    elif config.type == 'CIF':
+        import sp_layers
+        import encoder_layers
+        import attention_assigner
+        import decoder_layers
+        from models import CIF as Model
+
+        splayer = sp_layers.SPLayer(modelconfig["signal"])
+        encoder = encoder_layers.Transformer(modelconfig["encoder"])
+        assigner = attention_assigner.Attention_Assigner(modelconfig["assigner"])
+        modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
+        decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
+
+        model = Model(splayer, encoder, assigner, decoder)
+
     logging.info("\nModel info:\n{}".format(model))
 
     if args.continue_training:

@@ -6,7 +6,7 @@ data:
   maxlen: 60
   fetchworker_num: 12
 model:
-  type: conv-transformer
+  type: CIF
   signal:
     feature_type: fbank
     sample_rate: 16000
@@ -29,6 +29,11 @@ model:
     activation: "glu"
     num_layers: 6
     dropout_rate: 0.1
+  assigner:
+    d_model: 512
+    n_layers: 1
+    w_context: 3
+    dropout: 0.1
   decoder:
     type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer
