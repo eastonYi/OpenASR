@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import sys
-import os
 import argparse
 import logging
 import torch
@@ -36,8 +35,7 @@ def get_args():
      Usage: feedforward.py <model_pkg> <wav_scp> <output_path>""")
     parser.add_argument("model_pkg", help="path to model package.")
     parser.add_argument("vocab_file", help="path to vocabulary file.")
-    parser.add_argument("data_dir", help="data directory")
-    parser.add_argument("scptag", help="tag of wav.scp. unused for feats.scp")
+    parser.add_argument("json_file", help="data directory")
     parser.add_argument("output", help="output")
     parser.add_argument("--feed-batchsize", type=int, default=20, help="batch_size")
     parser.add_argument("--nbest", type=int, default=13, help="nbest")
@@ -70,22 +68,12 @@ if __name__ == "__main__":
         model = model.cuda()
     model.eval()
     tokenizer = data.CharTokenizer(args.vocab_file)
-    #test_set = data.KaldiDataset(args.data_dir, tag=args.scptag)
-    test_set = data.SpeechDataset('data/test.json')
+    test_set = data.SpeechDataset(args.json_file)
 
-    if os.path.exists(os.path.join(args.data_dir, 'wav.scp')):
-        offline = False
-        test_loader = torch.utils.data.DataLoader(test_set,
-                collate_fn=data.kaldi_wav_collate, shuffle=False, batch_size=args.feed_batchsize)
-    elif os.path.exists(os.path.join(args.data_dir, 'feats.scp')):
-        offline = True
-        test_loader = torch.utils.data.DataLoader(test_set,
-                collate_fn=data.kaldi_feat_collate, shuffle=False, batch_size=args.feed_batchsize)
-    else:
-        collate = data.WaveCollate(tokenizer, 60)
-        validsampler = data.TimeBasedSampler(test_set, args.feed_batchsize, 1, shuffle=False)
-        test_loader = torch.utils.data.DataLoader(test_set,
-            collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=1)
+    collate = data.WaveCollate(tokenizer, 60)
+    validsampler = data.TimeBasedSampler(test_set, args.feed_batchsize, 1, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_set,
+        collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=1)
     logging.info("Start feedforward...")
 
     tot_timer = utils.Timer()

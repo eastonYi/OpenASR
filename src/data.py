@@ -24,10 +24,10 @@ from torch.utils.data.sampler import Sampler
 
 import utils
 
-IGNORE_ID = -1 
+IGNORE_ID = -1
 
-SOS_SYM = "<s>"
-EOS_SYM = "</s>"
+SOS_SYM = "<sos>"
+EOS_SYM = "<eos>"
 UNK_SYM = "<unk>"
 SPECIAL_SYM_SET = {SOS_SYM, EOS_SYM, UNK_SYM}
 
@@ -46,9 +46,9 @@ class CharTokenizer(object):
         return self.id2unit[id]
 
     def encode(self, textline):
-        return [self.unit2id[char] 
-            if char in self.unit2id 
-            else self.unit2id[UNK_SYM] 
+        return [self.unit2id[char]
+            if char in self.unit2id
+            else self.unit2id[UNK_SYM]
             for char in list(textline.strip())]
 
     def decode(self, ids, split_token=True, remove_special_sym=True):
@@ -57,7 +57,7 @@ class CharTokenizer(object):
             syms = [sym for sym in syms if sym not in SPECIAL_SYM_SET]
         if split_token:
             return " ".join(syms)
-        return "".join(syms) 
+        return "".join(syms)
 
     def unit_num(self):
         return len(self.unit2id)
@@ -67,7 +67,7 @@ def gen_casual_targets(idslist, maxlen, sos_id, eos_id):
     ids_with_sym_list = [[sos_id]+ids+[eos_id] for ids in idslist]
     B = len(idslist)
     padded_rawids = -torch.ones(B, maxlen+1).long()
- 
+
     for b, ids in enumerate(ids_with_sym_list):
         if len(ids) > maxlen:
             logging.warn("ids length {} vs. maxlen {}, cut it.".format(len(ids), maxlen))
@@ -79,7 +79,7 @@ def gen_casual_targets(idslist, maxlen, sos_id, eos_id):
     labels = padded_rawids[:, 1:]
     ids = padded_rawids[:, :-1]
     paddings = paddings[:, 1:] # the padding is for labels
-    
+
     return ids, labels, paddings
 
 
@@ -87,7 +87,7 @@ class TextLineByLineDataset(data.Dataset):
     def __init__(self, fn):
         super(TextLineByLineDataset, self).__init__()
         with open(fn, 'r') as f:
-            self.data = f.read().strip().split('\n') 
+            self.data = f.read().strip().split('\n')
 
     def __getitem__(self, index):
         return self.data[index]
@@ -136,19 +136,19 @@ class KaldiDataset(data.Dataset):
         return len(self.data)
 
 
-class TimeBasedSampler(Sampler): 
+class TimeBasedSampler(Sampler):
     def __init__(self, dataset, duration=200, ngpu=1, shuffle=False): # 200s
         self.dataset = dataset
         self.dur = duration
         self.shuffle = shuffle
-        
+
         batchs = []
         batch = []
         batch_dur = 0.
         for idx in range(len(self.dataset)):
             batch.append(idx)
-            batch_dur += self.dataset[idx]["duration"] 
-            if batch_dur >= self.dur and len(batch)%ngpu==0: 
+            batch_dur += self.dataset[idx]["duration"]
+            if batch_dur >= self.dur and len(batch)%ngpu==0:
                 # To make the numbers of batchs are equal for each GPU.
                 batchs.append(batch)
                 batch = []
@@ -159,14 +159,14 @@ class TimeBasedSampler(Sampler):
             else:
                 b = len(batch)
                 batchs.append(batch[b//ngpu*ngpu:])
-        self.batchs = batchs 
+        self.batchs = batchs
 
     def __iter__(self):
         if self.shuffle:
             np.random.shuffle(self.batchs)
         for b in self.batchs:
             yield b
-         
+
     def __len__(self):
         return len(self.batchs)
 
@@ -175,7 +175,7 @@ def load_wave_batch(paths):
     waveforms = []
     lengths = []
     for path in paths:
-        sample_rate, waveform = utils.load_wave(path) 
+        sample_rate, waveform = utils.load_wave(path)
         waveform = torch.from_numpy(waveform)
         waveforms.append(waveform)
         lengths.append(waveform.shape[0])
@@ -190,7 +190,7 @@ def load_feat_batch(paths):
     features = []
     lengths = []
     for path in paths:
-        feature = utils.load_feat(path) 
+        feature = utils.load_feat(path)
         feature = torch.from_numpy(feature)
         features.append(feature)
         lengths.append(feature.shape[0])
@@ -209,10 +209,10 @@ class TextCollate(object):
         return
 
     def __call__(self, batch):
-        timer = utils.Timer()        
+        timer = utils.Timer()
         timer.tic()
         rawids_list = [self.tokenizer.encode(t) for t in batch]
-        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen, 
+        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
                 self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM))
         logging.debug("Text Processing Time: {}s".format(timer.toc()))
         return ids, labels, paddings
@@ -225,16 +225,16 @@ class WaveCollate(object):
         return
 
     def __call__(self, batch):
-        utts = [d["utt"] for d in batch] 
-        paths = [d["path"] for d in batch] 
-        trans = [d["transcript"] for d in batch] 
-        timer = utils.Timer()        
+        utts = [d["utt"] for d in batch]
+        paths = [d["path"] for d in batch]
+        trans = [d["transcript"] for d in batch]
+        timer = utils.Timer()
         timer.tic()
         padded_waveforms, wave_lengths = load_wave_batch(paths)
         logging.debug("Wave Loading Time: {}s".format(timer.toc()))
         timer.tic()
         rawids_list = [self.tokenizer.encode(t) for t in trans]
-        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen, 
+        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
                 self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM))
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
         return utts, padded_waveforms, wave_lengths, ids, labels, paddings
@@ -247,16 +247,16 @@ class FeatureCollate(object):
         return
 
     def __call__(self, batch):
-        utts = [d["utt"] for d in batch] 
-        paths = [d["path"] for d in batch] 
-        trans = [d["transcript"] for d in batch] 
-        timer = utils.Timer()        
+        utts = [d["utt"] for d in batch]
+        paths = [d["path"] for d in batch]
+        trans = [d["transcript"] for d in batch]
+        timer = utils.Timer()
         timer.tic()
         padded_features, feature_lengths = load_feat_batch(paths)
         logging.debug("Feature Loading Time: {}s".format(timer.toc()))
         timer.tic()
         rawids_list = [self.tokenizer.encode(t) for t in trans]
-        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen, 
+        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
                 self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM))
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
         return utts, padded_features, feature_lengths, ids, labels, paddings

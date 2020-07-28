@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export MAIN_ROOT=$PWD/../../..
-export TOOLS_ROOT=$MAIN_ROOT/tools
+export MAIN_ROOT=$PWD/../../
 export SRC_ROOT=$MAIN_ROOT/src
-export PYTHONPATH=$MAIN_ROOT/src
-
+export PYTHONPATH=$SRC_ROOT
