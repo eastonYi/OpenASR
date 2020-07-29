@@ -5,10 +5,31 @@ import subprocess
 import time
 import numpy as np
 import torch
+from collections import defaultdict
+
 from third_party import wavfile
-from third_party import kaldi_io as kio
 
 TENSORBOARD_LOGGING = 0
+
+
+def load_vocab(path, vocab_size=None):
+    with open(path, encoding='utf8') as f:
+        vocab = [line.strip().split()[0] for line in f]
+    vocab = vocab[:vocab_size] if vocab_size else vocab
+    id_unk = vocab.index('<unk>')
+    token2idx = defaultdict(lambda: id_unk)
+    idx2token = defaultdict(lambda: '<unk>')
+    token2idx.update({token: idx for idx, token in enumerate(vocab)})
+    idx2token.update({idx: token for idx, token in enumerate(vocab)})
+    idx2token[token2idx['<pad>']] = ''
+    idx2token[token2idx['<blk>']] = ''
+    idx2token[token2idx['<unk>']] = '<UNK>'
+    idx2token[token2idx['<sos>']] = ''
+    idx2token[token2idx['<eos>']] = ''
+
+    assert len(token2idx) == len(idx2token)
+
+    return token2idx, idx2token
 
 
 def cleanup_ckpt(expdir, num_last_ckpt_keep):
@@ -72,18 +93,6 @@ def load_wave(path):
         raise ValueError("Unknown file tag.")
     data = data.astype(np.float32)
     return sample_rate, data
-
-
-def load_feat(path):
-    items = path.strip().split(":", 1)
-    if len(items) != 2:
-        raise ValueError("Unknown path format.")
-    tag = items[0]
-    path = items[1]
-    if tag == "ark":
-        return kio.read_mat(path)
-    else:
-        raise ValueError("Unknown file tag.")
 
 
 def parse_scp(fn):

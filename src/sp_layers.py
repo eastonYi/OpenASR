@@ -27,10 +27,6 @@ class SPLayer(nn.Module):
         super(SPLayer, self).__init__()
         self.config = config
         self.feature_type = config["feature_type"]
-        self.sample_rate = float(config["sample_rate"])
-        self.num_mel_bins = int(config["num_mel_bins"])
-        self.use_energy = config["use_energy"]
-        self.spec_aug_conf = None
         if "spec_aug" in config:
             self.spec_aug_conf = {
                 "freq_mask_num": config["spec_aug"]["freq_mask_num"],
@@ -42,14 +38,13 @@ class SPLayer(nn.Module):
         self.num_ceps = None
         if self.feature_type == "offline":
             feature_func = None
-            logging.warn("Use offline features. It is your duty to keep features match.")
         elif self.feature_type == "fbank":
             def feature_func(waveform):
                 return ksp.fbank(
                     waveform,
-                    sample_frequency=self.sample_rate,
-                    use_energy=self.use_energy,
-                    num_mel_bins=self.num_mel_bins
+                    sample_frequency=float(config["sample_rate"]),
+                    use_energy=config["use_energy"],
+                    num_mel_bins=int(config["num_mel_bins"])
                  )
         else:
             raise ValueError("Unknown feature type.")

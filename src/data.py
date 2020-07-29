@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-import os
 import logging
 import json
 import numpy as np
@@ -23,6 +21,7 @@ import torch.utils.data as data
 from torch.utils.data.sampler import Sampler
 
 import utils
+import third_party.kaldi_io as kio
 
 IGNORE_ID = -1
 
@@ -101,7 +100,7 @@ class TextLineByLineDataset(data.Dataset):
 
 class SpeechDataset(data.Dataset):
     def __init__(self, data_json_path, reverse=False):
-        super(SpeechDataset, self).__init__()
+        super().__init__()
         with open(data_json_path, 'rb') as f:
             data = json.load(f)
         self.data = sorted(data, key=lambda x: float(x["duration"]))
@@ -115,28 +114,13 @@ class SpeechDataset(data.Dataset):
         return len(self.data)
 
 
-class KaldiDataset(data.Dataset):
-    def __init__(self, data_dir, tag="file"):
-        super().__init__()
-        self.data = []
-        if os.path.exists(os.path.join(data_dir, 'feats.scp')):
-            p = os.path.join(data_dir, 'feats.scp')
-        elif os.path.exists(os.path.join(data_dir, 'wav.scp')):
-            p = os.path.join(data_dir, 'wav.scp')
-        else:
-            raise ValueError("None of feats.scp or wav.scp exist.")
-        with open(p, 'r') as f:
-            for line in f:
-                utt, path = line.strip().split(' ', 1)
-                path = "{}:{}".format(tag, path)
-                d = (utt, path)
-                self.data.append(d)
-
-    def __getitem__(self, index):
-        return self.data[index]
-
-    def __len__(self):
-        return len(self.data)
+class ArkDataset(SpeechDataset):
+    def __init__(self, data_json_path, reverse=False):
+        with open(data_json_path, 'rb') as f:
+            data = json.load(f)
+        self.data = sorted(data, key=lambda x: float(x["input_length"]))
+        if reverse:
+            self.data.reverse()
 
 
 class TimeBasedSampler(Sampler):
@@ -174,6 +158,32 @@ class TimeBasedSampler(Sampler):
         return len(self.batchs)
 
 
+class FrameBasedSampler(TimeBasedSampler):
+    def __init__(self, dataset, frames=200, ngpu=1, shuffle=False):
+        self.dataset = dataset
+        self.frames = frames
+        self.shuffle = shuffle
+
+        batchs = []
+        batch = []
+        batch_frames = 0
+        for idx in range(len(self.dataset)):
+            batch.append(idx)
+            batch_frames += self.dataset[idx]["input_length"]
+            if batch_frames >= self.frames and len(batch)%ngpu==0:
+                # To make the numbers of batchs are equal for each GPU.
+                batchs.append(batch)
+                batch = []
+                batch_frames = 0
+        if batch:
+            if len(batch)%ngpu==0:
+                batchs.append(batch)
+            else:
+                b = len(batch)
+                batchs.append(batch[b//ngpu*ngpu:])
+        self.batchs = batchs
+
+
 def load_wave_batch(paths):
     waveforms = []
     lengths = []
@@ -193,7 +203,7 @@ def load_feat_batch(paths):
     features = []
     lengths = []
     for path in paths:
-        feature = utils.load_feat(path)
+        feature = kio.read_mat(path)
         feature = torch.from_numpy(feature)
         features.append(feature)
         lengths.append(feature.shape[0])
@@ -251,8 +261,8 @@ class FeatureCollate(object):
 
     def __call__(self, batch):
         utts = [d["utt"] for d in batch]
-        paths = [d["path"] for d in batch]
-        trans = [d["transcript"] for d in batch]
+        paths = [d["feat"] for d in batch]
+        trans = [d["trans"] for d in batch]
         timer = utils.Timer()
         timer.tic()
         padded_features, feature_lengths = load_feat_batch(paths)

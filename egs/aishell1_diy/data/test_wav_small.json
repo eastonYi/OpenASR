@@ -1,0 +1,26 @@
+[
+  {
+    "utt": "BAC009S0764W0121",
+    "path": "file:/Users/easton/Data/libriSpeech/test/S0764/BAC009S0764W0121.wav",
+    "transcript": "甚至出现交易几乎停滞的情况",
+    "duration": 4.2039375
+  },
+  {
+    "utt": "BAC009S0764W0122",
+    "path": "file:/Users/easton/Data/libriSpeech/test/S0764/BAC009S0764W0122.wav",
+    "transcript": "一二线城市虽然也处于调整中",
+    "duration": 4.115
+  },
+  {
+    "utt": "BAC009S0764W0123",
+    "path": "file:/Users/easton/Data/libriSpeech/test/S0764/BAC009S0764W0123.wav",
+    "transcript": "但因为聚集了过多公共资源",
+    "duration": 4.0
+  },
+  {
+    "utt": "BAC009S0764W0124",
+    "path": "file:/Users/easton/Data/libriSpeech/test/S0764/BAC009S0764W0124.wav",
+    "transcript": "为了规避三四线城市明显过剩的市场风险",
+    "duration": 5.237
+  }
+]

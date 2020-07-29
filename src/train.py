@@ -18,6 +18,8 @@ import argparse
 import logging
 import yaml
 import torch
+import utils
+import data
 
 if "LAS_LOG_LEVEL" in os.environ:
     LOG_LEVEL = os.environ["LAS_LOG_LEVEL"]
@@ -31,10 +33,6 @@ else:
      logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s')
-
-import utils
-import data
-
 
 def get_args():
     parser = argparse.ArgumentParser(description="""
@@ -57,20 +55,23 @@ if __name__ == "__main__":
     trainingconfig = config["training"]
     modelconfig = config["model"]
 
-    training_set = data.SpeechDataset(dataconfig["trainset"])
-    valid_set = data.SpeechDataset(dataconfig["devset"], reverse=True)
-
-    tokenizer = data.CharTokenizer(dataconfig["vocab_path"])
-    if modelconfig['signal']["feature_type"] == 'offline':
-        collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"])
-    else:
-        collate = data.WaveCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"])
-
     ngpu = 1
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
-    trainingsampler = data.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
-    validsampler = data.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
+
+    tokenizer = data.CharTokenizer(dataconfig["vocab_path"])
+    if modelconfig['signal']["feature_type"] == 'offline':
+        training_set = data.ArkDataset(dataconfig["trainset"])
+        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
+        collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"])
+        trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
+        validsampler = data.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
+    else:
+        training_set = data.SpeechDataset(dataconfig["trainset"])
+        valid_set = data.SpeechDataset(dataconfig["devset"], reverse=True)
+        collate = data.WaveCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"])
+        trainingsampler = data.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
+        validsampler = data.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
 
     tr_loader = torch.utils.data.DataLoader(training_set,
         collate_fn=collate, batch_sampler=trainingsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])

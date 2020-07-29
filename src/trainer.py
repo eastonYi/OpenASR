@@ -321,7 +321,7 @@ class CIF_Trainer(Trainer):
             n_sequence = len(utts)
             tot_sequence += n_sequence
 
-            loss = (self.lambda_qua * qua_loss + ce_loss).sum() / n_token
+            loss = ce_loss.sum()/n_token + self.lambda_qua * qua_loss.sum()/n_sequence
 
             tot_qua_loss += qua_loss
             tot_loss += ce_loss
@@ -344,7 +344,7 @@ class CIF_Trainer(Trainer):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('Epoch {} | Step {} | Iter {} batch {} all_loss/token: {:.3f} avg_ce_loss/token: {:.3f} avg_qua_loss/sent: {:.3f} lr: {:.3e} sec/sent: {:.3f}s'.format(
+                print('Epoch {} | Step {} | Iter {} batch {} all_loss/token: {:.3f} avg_ce_loss/token: {:.3f} avg_qua_loss/sent: {:.3f} lr: {:.3e} sec/sent: {:.3f}s\n'.format(
                     self.epoch, self.step, niter, padded_waveforms.size(),
                     loss, tot_loss / tot_token, tot_qua_loss / tot_sequence,
                     list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()

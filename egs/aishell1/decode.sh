@@ -1,11 +1,11 @@
 #!/bin/bash
 source path.sh
 
-config=$1
+expdir=$1
 gpu=$2
 
-expdir=exp/base
-ep=avg-last10
+# ep=avg-last1
+ep=${3:?"avg-last10"}
 decode_dir=$expdir/decode_test_${ep}
 mkdir -p $decode_dir
 
