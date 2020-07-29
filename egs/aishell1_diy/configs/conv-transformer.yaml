@@ -38,7 +38,7 @@ model:
     activation: "glu"
     dropout_rate: 0.1
 training:
-    batch_frames: 5000
+    batch_frames: 20000
     multi_gpu: False
     exp_dir: exp/base
     print_inteval: 10

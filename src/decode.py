@@ -17,7 +17,6 @@ import sys
 import argparse
 import logging
 import torch
-import yaml
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -25,15 +24,12 @@ logging.basicConfig(
 
 import utils
 import data
-import sp_layers
-import encoder_layers
-import decoder_layers
-from models import Conv_Transformer as Model
 
 
 def get_args():
     parser = argparse.ArgumentParser(description="""
      Usage: feedforward.py <model_pkg> <wav_scp> <output_path>""")
+    parser.add_argument("model_type", help="path to model package.")
     parser.add_argument("model_pkg", help="path to model package.")
     parser.add_argument("vocab_file", help="path to vocabulary file.")
     parser.add_argument("json_file", help="data directory")
@@ -60,12 +56,47 @@ if __name__ == "__main__":
 
     logging.info("Load package from {}.".format(args.model_pkg))
     pkg = torch.load(args.model_pkg, map_location=lambda storage, loc: storage)
-    splayer = sp_layers.SPLayer(pkg["model"]["splayer_config"])
-    encoder = encoder_layers.Transformer(pkg["model"]["encoder_config"])
-    decoder = decoder_layers.TransformerDecoder(pkg["model"]["decoder_config"])
 
-    model = Model(splayer, encoder, decoder)
-    logging.info("\nModel info:\n{}".format(model))
+    if args.model_type.lower() == 'conv-transformer':
+        import sp_layers
+        import encoder_layers
+        import decoder_layers
+        from models import Conv_Transformer as Model
+
+        splayer = sp_layers.SPLayer(pkg["model"]["splayer_config"])
+        encoder = encoder_layers.Transformer(pkg["model"]["encoder_config"])
+        decoder = decoder_layers.TransformerDecoder(pkg["model"]["decoder_config"])
+
+    elif args.model_type.lower() == 'conv-ctc-transformer':
+        import sp_layers
+        import encoder_layers
+        import decoder_layers
+        from models import Conv_CTC_Transformer as Model
+
+        splayer = sp_layers.SPLayer(pkg["model"]["splayer_config"])
+        encoder = encoder_layers.Transformer(pkg["model"]["encoder_config"])
+        decoder = decoder_layers.TransformerDecoder(pkg["model"]["decoder_config"])
+
+        model = Model(splayer, encoder, decoder)
+
+    elif args.model_type.lower() == 'cif':
+        import sp_layers
+        import encoder_layers
+        import attention_assigner
+        import decoder_layers
+        from models import CIF as Model
+
+        splayer = sp_layers.SPLayer(pkg["model"]["splayer_config"])
+        encoder = encoder_layers.Transformer(pkg["model"]["encoder_config"])
+        decoder = decoder_layers.CIF_Decoder(pkg["model"]["decoder_config"])
+        assigner = attention_assigner.Attention_Assigner(pkg["model"]["assigner_config"])
+
+        model = Model(splayer, encoder, assigner, decoder)
+
+    else:
+        raise NotImplementedError('not found model_type!')
+
+    # logging.info("\nModel info:\n{}".format(model))
     model.restore(pkg["model"])
     if args.use_gpu:
         model = model.cuda()

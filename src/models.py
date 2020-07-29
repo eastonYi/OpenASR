@@ -228,9 +228,9 @@ class Conv_CTC_Transformer(Conv_Transformer):
             "splayer_state": self.splayer.state_dict(),
             "encoder_config": self.encoder.config,
             "encoder_state": self.encoder.state_dict(),
-            "ctc_fc_state": self.ctc_fc.state_dict(),
             "decoder_config": self.decoder.config,
             "decoder_state": self.decoder.state_dict(),
+            "ctc_fc_state": self.ctc_fc.state_dict()
              }
         return pkg
 
@@ -253,17 +253,14 @@ class Conv_CTC_Transformer(Conv_Transformer):
 
         self.splayer.load_state_dict(pkg["splayer_state"])
         self.encoder.load_state_dict(pkg["encoder_state"])
-        self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
         self.decoder.load_state_dict(pkg["decoder_state"])
+        self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
 
 
-class CIF(Conv_Transformer):
+class CIF(Conv_CTC_Transformer):
     def __init__(self, splayer, encoder, assigner, decoder):
-        torch.nn.Module.__init__(self)
-        self.splayer = splayer
-        self.encoder = encoder
+        super().__init__(splayer, encoder, decoder)
         self.assigner = assigner
-        self.decoder = decoder
         self._reset_parameters()
 
     def forward(self, batch_wave, lengths, target_ids, target_labels=None, target_paddings=None, label_smooth=0., threshold=0.95):
@@ -272,6 +269,8 @@ class CIF(Conv_Transformer):
 
         encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
         encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
+        ctc_logits = self.ctc_fc(encoder_outputs)
+        len_logits_ctc = encoder_output_lengths
         alphas = self.assigner(encoder_outputs, encoder_output_lengths)
 
         # sum
@@ -285,10 +284,11 @@ class CIF(Conv_Transformer):
 
         logits = self.decoder(cif_outputs, target_ids, target_lengths)
 
+        ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, target_labels, target_lengths)
         qua_loss = cal_qua_loss(_num, num)
         ce_loss = cal_ce_loss(logits, target_labels, target_paddings, label_smooth)
 
-        return qua_loss, ce_loss
+        return ctc_loss, qua_loss, ce_loss
 
     def cif(self, hidden, alphas, threshold, log=False):
         device = hidden.device
@@ -350,12 +350,6 @@ class CIF(Conv_Transformer):
         target_ids, scores = self._beam_search(encoder_outputs, encoder_output_lengths, nbest_keep, sosid, eosid, maxlen)
 
         return target_ids, scores
-
-    def _get_acoustic_representations(self, batch_wave, lengths):
-        encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
-        encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
-
-        return encoder_outputs, encoder_output_lengths
 
     def _beam_search(self, encoder_outputs, encoder_output_lengths, nbest_keep, sosid, eosid, maxlen):
 
@@ -469,6 +463,7 @@ class CIF(Conv_Transformer):
             "assigner_state": self.assigner.state_dict(),
             "decoder_config": self.decoder.config,
             "decoder_state": self.decoder.state_dict(),
+            "ctc_fc_state": self.ctc_fc.state_dict(),
              }
         return pkg
 
@@ -497,8 +492,4 @@ class CIF(Conv_Transformer):
         self.encoder.load_state_dict(pkg["encoder_state"])
         self.assigner.load_state_dict(pkg["assigner_state"])
         self.decoder.load_state_dict(pkg["decoder_state"])
-
-    def _reset_parameters(self):
-        for p in self.parameters():
-            if p.dim() > 1:
-                xavier_uniform_(p)
+        self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])

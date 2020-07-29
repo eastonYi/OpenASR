@@ -60,6 +60,7 @@ if __name__ == "__main__":
         ngpu = torch.cuda.device_count()
 
     tokenizer = data.CharTokenizer(dataconfig["vocab_path"], add_blk=modelconfig['add_blk'])
+    modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
     if modelconfig['signal']["feature_type"] == 'offline':
         training_set = data.ArkDataset(dataconfig["trainset"])
         valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
@@ -88,7 +89,6 @@ if __name__ == "__main__":
 
         splayer = sp_layers.SPLayer(modelconfig["signal"])
         encoder = encoder_layers.Transformer(modelconfig["encoder"])
-        modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
         decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
 
         model = Model(splayer, encoder, decoder)
@@ -102,7 +102,6 @@ if __name__ == "__main__":
 
         splayer = sp_layers.SPLayer(modelconfig["signal"])
         encoder = encoder_layers.Transformer(modelconfig["encoder"])
-        modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
         decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
 
         model = Model(splayer, encoder, decoder)
@@ -119,7 +118,6 @@ if __name__ == "__main__":
         splayer = sp_layers.SPLayer(modelconfig["signal"])
         encoder = encoder_layers.Transformer(modelconfig["encoder"])
         assigner = attention_assigner.Attention_Assigner(modelconfig["assigner"])
-        modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
         decoder = decoder_layers.CIF_Decoder(modelconfig["decoder"])
 
         model = Model(splayer, encoder, assigner, decoder)

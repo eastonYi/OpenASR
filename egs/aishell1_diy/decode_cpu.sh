@@ -2,15 +2,16 @@
 source path.sh
 
 expdir=$1
+model_type=$2
+# ep=${2:?"last-ckpt"}
 
-# ep=avg-last1
-ep=${2:?"avg-last10"}
-decode_dir=$expdir/decode_test_${ep}
+decode_dir=$expdir/decode_test_${last-ckpt}
 mkdir -p $decode_dir
 python -W ignore::UserWarning $SRC_ROOT/decode.py \
     --feed-batchsize 2 \
     --nbest 5 \
-    $expdir/${ep}.pt \
+    $model_type \
+    $expdir/last-ckpt.pt \
     ../aishell1/data/aishell1_train_chars.txt \
     data/test_ark_small.json \
     $decode_dir/hyp.txt

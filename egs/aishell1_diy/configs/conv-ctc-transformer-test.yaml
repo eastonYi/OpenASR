@@ -1,4 +1,4 @@
-# continue_training:
+continue_training:
 data:
   trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1_diy/data/test_ark_small.json
   devset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1_diy/data/test_ark_small.json
@@ -6,8 +6,8 @@ data:
   maxlen: 60
   fetchworker_num: 1
 model:
-  type: CIF
-  no_eos: True
+  type: conv-ctc-transformer
+  no_eos: False
   add_blk: True
   signal:
     feature_type: offline
@@ -28,11 +28,6 @@ model:
     activation: "glu"
     num_layers: 6
     dropout_rate: 0.1
-  assigner:
-    d_model: 512
-    n_layers: 1
-    w_context: 3
-    dropout: 0.1
   decoder:
     type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer
@@ -46,18 +41,17 @@ model:
 training:
     batch_frames: 600
     multi_gpu: False
-    exp_dir: exp/cif
+    exp_dir: exp/conv-ctc-transformer
     print_inteval: 10
     num_epoch: 80
-    accumulate_grad_batch: 8
+    accumulate_grad_batch: 1
     init_lr: 1.0
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    lambda_qua: 0.1
-    lambda_ctc: 1.0
     num_last_ckpt_keep: 1
+    lambda_ctc: 1.0
     lr_scheduler:
-        type: "warmup_transformer"
+        type: warmup_transformer
         warmup_step: 10000
         d_model: 512

@@ -378,6 +378,7 @@ class CIF_Trainer(Trainer):
         self.grad_max_norm = config["grad_max_norm"]
         self.label_smooth = config["label_smooth"]
         self.lambda_qua = config["lambda_qua"]
+        self.lambda_ctc = config["lambda_ctc"]
 
         self.num_last_ckpt_keep = None
         if "num_last_ckpt_keep" in config:
@@ -414,6 +415,7 @@ class CIF_Trainer(Trainer):
         timer = utils.Timer()
         timer.tic()
         tot_loss = 0.
+        tot_ctc_loss = 0.
         tot_qua_loss = 0.
         tot_token = 0
         tot_sequence = 0
@@ -427,13 +429,13 @@ class CIF_Trainer(Trainer):
 
             if cross_valid:
                 with torch.no_grad():
-                    qua_loss, ce_loss = self.model(padded_waveforms.to(self.device),
+                    ctc_loss, qua_loss, ce_loss = self.model(padded_waveforms.to(self.device),
                             wave_lengths.long().to(self.device),
                             ids.long().to(self.device),
                             labels.long().to(self.device),
                             paddings.long().to(self.device))
             else:
-                qua_loss, ce_loss = self.model(padded_waveforms.to(self.device),
+                ctc_loss, qua_loss, ce_loss = self.model(padded_waveforms.to(self.device),
                         wave_lengths.long().to(self.device),
                         ids.long().to(self.device),
                         labels.long().to(self.device),
@@ -445,8 +447,11 @@ class CIF_Trainer(Trainer):
             n_sequence = len(utts)
             tot_sequence += n_sequence
 
-            loss = ce_loss.sum()/n_token + self.lambda_qua * qua_loss.sum()/n_sequence
+            loss = ce_loss.sum()/n_token + \
+                   self.lambda_qua * qua_loss.sum()/n_sequence + \
+                   self.lambda_ctc * ctc_loss.sum()/n_sequence
 
+            tot_ctc_loss += ctc_loss
             tot_qua_loss += qua_loss
             tot_loss += ce_loss
 
@@ -468,9 +473,9 @@ class CIF_Trainer(Trainer):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('Epoch {} | Step {} | Iter {} batch {} all_loss/token: {:.3f} avg_ce_loss/token: {:.3f} avg_qua_loss/sent: {:.3f} lr: {:.3e} sec/sent: {:.3f}s\n'.format(
+                print('Epoch {} | Step {} | Iter {} batch {} all_loss/token: {:.3f} avg_ce_loss/token: {:.3f} avg_ctc_loss/sent: {:.3f} avg_qua_loss/sent: {:.3f} lr: {:.3e} sec/sent: {:.3f}s\n'.format(
                     self.epoch, self.step, niter, padded_waveforms.size(),
-                    loss, tot_loss / tot_token, tot_qua_loss / tot_sequence,
+                    loss, tot_loss/tot_token, tot_ctc_loss/tot_sequence, tot_qua_loss/tot_sequence,
                     list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
                 ), flush=True)
 
