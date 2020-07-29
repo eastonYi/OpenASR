@@ -120,7 +120,8 @@ if __name__ == "__main__":
         logging.info("Let's use {} GPUs!".format(torch.cuda.device_count()))
         model = torch.nn.DataParallel(model)
 
-    # model = model.cuda()
+    if torch.cuda.is_available():
+        model = model.cuda()
 
     trainer = Trainer(model, trainingconfig, tr_loader, cv_loader)
 

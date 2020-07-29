@@ -48,7 +48,7 @@ model:
 training:
     batch_time: 150
     multi_gpu: False
-    exp_dir: exp/base
+    exp_dir: exp/cif
     print_inteval: 10
     num_epoch: 80
     accumulate_grad_batch: 8

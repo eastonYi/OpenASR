@@ -128,7 +128,10 @@ class CIF_Decoder(nn.Module):
         decoder_inputs_emb = self.dropout(decoder_inputs_emb)
         decoder_inputs_emb = decoder_inputs_emb.permute(1, 0, 2)
 
-        outputs = self.input_affine(torch.cat([encoder_outputs, decoder_inputs_emb], -1))
+        try:
+            outputs = self.input_affine(torch.cat([encoder_outputs, decoder_inputs_emb], -1))
+        except:
+            import pdb; pdb.set_trace()
 
         outputs = self.transformer_block(outputs,
             src_key_padding_mask=src_key_padding_mask)

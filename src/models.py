@@ -217,7 +217,7 @@ class CIF(Conv_Transformer):
         _num = alphas.sum(-1)
         # scaling
         num = (target_labels > 0).float().sum(-1)
-        num_noise = num + torch.rand(alphas.size(0)).to(device) - 0.5
+        num_noise = num + 0.9 * torch.rand(alphas.size(0)).to(device) - 0.45
         alphas *= (num_noise / _num)[:, None].repeat(1, alphas.size(1))
 
         cif_outputs = self.cif(encoder_outputs, alphas, threshold=threshold)
