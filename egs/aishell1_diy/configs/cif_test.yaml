@@ -43,7 +43,7 @@ model:
     activation: "glu"
     dropout_rate: 0.1
 training:
-    batch_time: 5000
+    batch_frames: 600
     multi_gpu: False
     exp_dir: exp/base
     print_inteval: 10
@@ -57,5 +57,5 @@ training:
     num_last_ckpt_keep: 1
     lr_scheduler:
         type: "warmup_transformer"
-        warmup_step: 16000
+        warmup_step: 10000
         d_model: 512

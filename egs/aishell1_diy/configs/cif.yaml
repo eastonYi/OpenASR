@@ -1,8 +1,8 @@
 continue_training:
 data:
-  trainset: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/train.json
-  devset: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/dev.json
-  vocab_path: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/aishell1_train_chars.txt
+  trainset: /home/easton/projects/OpenASR/egs/aishell1_diy/data/train.json
+  devset: /home/easton/projects/OpenASR/egs/aishell1_diy/data/dev.json
+  vocab_path: /home/easton/projects/OpenASR/egs/aishell1_diy/data/aishell1_train_chars.txt
   maxlen: 60
   fetchworker_num: 4
 model:
@@ -43,7 +43,7 @@ model:
     activation: "glu"
     dropout_rate: 0.1
 training:
-    batch_time: 5000
+    batch_frames: 5000
     multi_gpu: False
     exp_dir: exp/cif
     print_inteval: 10
@@ -57,5 +57,5 @@ training:
     num_last_ckpt_keep: 10
     lr_scheduler:
         type: "warmup_transformer"
-        warmup_step: 16000
+        warmup_step: 10000
         d_model: 512

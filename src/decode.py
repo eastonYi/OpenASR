@@ -41,6 +41,8 @@ def get_args():
     parser.add_argument("--feed-batchsize", type=int, default=20, help="batch_size")
     parser.add_argument("--nbest", type=int, default=13, help="nbest")
     parser.add_argument("--maxlen", type=int, default=80, help="max_length")
+    parser.add_argument("--offline", type=utils.str2bool, default=False, help=".")
+    parser.add_argument("--add_blk", type=utils.str2bool, default=False, help=".")
     parser.add_argument("--use_gpu", type=utils.str2bool, default=False, help="whether to use gpu.")
     args = parser.parse_args()
     return args
@@ -68,11 +70,18 @@ if __name__ == "__main__":
     if args.use_gpu:
         model = model.cuda()
     model.eval()
-    tokenizer = data.CharTokenizer(args.vocab_file)
-    test_set = data.SpeechDataset(args.json_file)
 
-    collate = data.WaveCollate(tokenizer, 60)
-    validsampler = data.TimeBasedSampler(test_set, args.feed_batchsize, 1, shuffle=False)
+    tokenizer = data.CharTokenizer(args.vocab_file, add_blk=args.add_blk)
+
+    if args.offline:
+        test_set = data.SpeechDataset(args.json_file)
+        collate = data.WaveCollate(tokenizer, 60)
+        validsampler = data.TimeBasedSampler(test_set, args.feed_batchsize, 1, shuffle=False)
+    else:
+        test_set = data.ArkDataset(args.json_file)
+        collate = data.FeatureCollate(tokenizer, 60, args.add_blk)
+        validsampler = data.FrameBasedSampler(test_set, args.feed_batchsize, 1, shuffle=False)
+
     test_loader = torch.utils.data.DataLoader(test_set,
         collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=1)
     logging.info("Start feedforward...")

@@ -2,6 +2,15 @@ import torch
 import torch.nn.functional as F
 
 
+def cal_ctc_loss(logits_ctc, len_logits_ctc, targets, target_lengths):
+    n_class = logits_ctc.size(-1)
+    ctc_log_probs = F.log_softmax(logits_ctc, dim=-1).transpose(0,1)
+    ctc_loss = F.ctc_loss(ctc_log_probs, targets, len_logits_ctc, target_lengths,
+                          reduction="none", blank=n_class-1)
+
+    return ctc_loss.sum()
+
+
 def cal_qua_loss(_number, number):
     # qua_loss = torch.sqrt(torch.pow(_number - number, 2).sum())
     qua_loss = torch.pow(_number - number, 2).sum()

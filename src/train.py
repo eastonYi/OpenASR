@@ -59,7 +59,7 @@ if __name__ == "__main__":
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
 
-    tokenizer = data.CharTokenizer(dataconfig["vocab_path"])
+    tokenizer = data.CharTokenizer(dataconfig["vocab_path"], add_blk=modelconfig['add_blk'])
     if modelconfig['signal']["feature_type"] == 'offline':
         training_set = data.ArkDataset(dataconfig["trainset"])
         valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
@@ -85,6 +85,20 @@ if __name__ == "__main__":
         from models import Conv_Transformer as Model
 
         from trainer import Trainer
+
+        splayer = sp_layers.SPLayer(modelconfig["signal"])
+        encoder = encoder_layers.Transformer(modelconfig["encoder"])
+        modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
+        decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
+
+        model = Model(splayer, encoder, decoder)
+
+    elif modelconfig['type'] == 'conv-ctc-transformer':
+        import sp_layers
+        import encoder_layers
+        import decoder_layers
+        from models import Conv_CTC_Transformer as Model
+        from trainer import CTC_CE_Trainer as Trainer
 
         splayer = sp_layers.SPLayer(modelconfig["signal"])
         encoder = encoder_layers.Transformer(modelconfig["encoder"])

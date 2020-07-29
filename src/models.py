@@ -15,10 +15,11 @@ limitations under the License.
 """
 import logging
 import torch
+from torch import nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
 
-from loss import cal_ce_loss, cal_qua_loss
+from loss import cal_ctc_loss, cal_ce_loss, cal_qua_loss
 
 
 class Conv_Transformer(torch.nn.Module):
@@ -194,6 +195,66 @@ class Conv_Transformer(torch.nn.Module):
         for p in self.parameters():
             if p.dim() > 1:
                 xavier_uniform_(p)
+
+
+class Conv_CTC_Transformer(Conv_Transformer):
+    def __init__(self, splayer, encoder, decoder):
+        super().__init__(splayer, encoder, decoder)
+        self.ctc_fc = nn.Linear(encoder.d_model, decoder.vocab_size, bias=False)
+        self._reset_parameters()
+
+    def forward(self, batch_wave, lengths, target_ids, target_labels=None, target_paddings=None, label_smooth=0.):
+        target_lengths = torch.sum(1-target_paddings, dim=-1).long()
+        ctc_logits, len_logits_ctc, ce_logits = self.get_logits(
+            batch_wave, lengths, target_ids, target_lengths)
+
+        ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, target_labels, target_lengths-1) # the target of ctc counts without blk
+        ce_loss = cal_ce_loss(ce_logits, target_labels, target_paddings, label_smooth)
+
+        return ctc_loss, ce_loss
+
+    def get_logits(self, batch_wave, lengths, target_ids, target_lengths):
+        encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
+        encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
+        ctc_logits = self.ctc_fc(encoder_outputs)
+        ce_logits = self.decoder(encoder_outputs, encoder_output_lengths, target_ids, target_lengths)
+        len_logits_ctc = encoder_output_lengths
+
+        return ctc_logits, len_logits_ctc, ce_logits
+
+    def package(self):
+        pkg = {
+            "splayer_config": self.splayer.config,
+            "splayer_state": self.splayer.state_dict(),
+            "encoder_config": self.encoder.config,
+            "encoder_state": self.encoder.state_dict(),
+            "ctc_fc_state": self.ctc_fc.state_dict(),
+            "decoder_config": self.decoder.config,
+            "decoder_state": self.decoder.state_dict(),
+             }
+        return pkg
+
+    def restore(self, pkg):
+        # check config
+        logging.info("Restore model states...")
+        for key in self.splayer.config.keys():
+            if key == "spec_aug":
+                continue
+            if self.splayer.config[key] != pkg["splayer_config"][key]:
+                raise ValueError("splayer_config mismatch.")
+        for key in self.encoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.encoder.config[key] != pkg["encoder_config"][key]):
+                raise ValueError("encoder_config mismatch.")
+        for key in self.decoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.decoder.config[key] != pkg["decoder_config"][key]):
+                raise ValueError("decoder_config mismatch.")
+
+        self.splayer.load_state_dict(pkg["splayer_state"])
+        self.encoder.load_state_dict(pkg["encoder_state"])
+        self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
+        self.decoder.load_state_dict(pkg["decoder_state"])
 
 
 class CIF(Conv_Transformer):
