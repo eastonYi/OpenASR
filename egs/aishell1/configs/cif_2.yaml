@@ -48,7 +48,7 @@ model:
 training:
     batch_time: 150
     multi_gpu: False
-    exp_dir: exp/cif
+    exp_dir: exp/cif_2
     print_inteval: 10
     num_epoch: 80
     accumulate_grad_batch: 8
@@ -56,7 +56,7 @@ training:
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    lambda_qua: 0.1
+    lambda_qua: 0.01
     lr_scheduler:
         type: "warmup_transformer"
         warmup_step: 16000

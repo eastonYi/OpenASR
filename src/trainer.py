@@ -290,6 +290,7 @@ class CIF_Trainer(Trainer):
         timer = utils.Timer()
         timer.tic()
         tot_loss = 0.
+        tot_qua_loss = 0.
         tot_token = 0
         tot_sequence = 0
 
@@ -320,8 +321,9 @@ class CIF_Trainer(Trainer):
             n_sequence = len(utts)
             tot_sequence += n_sequence
 
-
             loss = (self.lambda_qua * qua_loss + ce_loss).sum() / n_token
+
+            tot_qua_loss += qua_loss
             tot_loss += ce_loss
 
             # compute gradients
@@ -342,12 +344,11 @@ class CIF_Trainer(Trainer):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('per_token_loss: {:.3f} avg_token_ce_loss: {:.3f} learning_rate: {:.3e} sequence_per_sec: {:.3f}'.format(
-                    loss, tot_loss / tot_token, list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
+                print('Epoch {} | Step {} | Iter {} batch {} all_loss/token: {:.3f} avg_ce_loss/token: {:.3f} avg_qua_loss/sent: {:.3f} lr: {:.3e} sec/sent: {:.3f}s'.format(
+                    self.epoch, self.step, niter, padded_waveforms.size(),
+                    loss, tot_loss / tot_token, tot_qua_loss / tot_sequence,
+                    list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
                 ), flush=True)
-
-                print("Epoch {} | Step {} | Iter {}:\n".format(self.epoch, self.step, niter),
-                      flush=True)
 
         torch.cuda.empty_cache()
         time.sleep(2)
