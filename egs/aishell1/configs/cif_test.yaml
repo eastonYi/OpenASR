@@ -56,6 +56,7 @@ training:
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
+    lambda_qua: 0.1
     lr_scheduler:
         type: "warmup_transformer"
         warmup_step: 16000

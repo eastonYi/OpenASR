@@ -253,6 +253,7 @@ class CIF_Trainer(Trainer):
         self.init_lr = config["init_lr"]
         self.grad_max_norm = config["grad_max_norm"]
         self.label_smooth = config["label_smooth"]
+        self.lambda_qua = config["lambda_qua"]
 
         self.num_last_ckpt_keep = None
         if "num_last_ckpt_keep" in config:
@@ -319,7 +320,8 @@ class CIF_Trainer(Trainer):
             n_sequence = len(utts)
             tot_sequence += n_sequence
 
-            loss = (qua_loss + ce_loss).sum() / n_token
+
+            loss = (self.lambda_qua * qua_loss + ce_loss).sum() / n_token
             tot_loss += ce_loss
 
             # compute gradients
