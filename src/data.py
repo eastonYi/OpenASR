@@ -260,7 +260,7 @@ class FeatureCollate(object):
         self.no_eos = no_eos
 
     def __call__(self, batch):
-        utts = [d["utt"] for d in batch]
+        utts = [d["uttid"] for d in batch]
         paths = [d["feat"] for d in batch]
         trans = [d["trans"] for d in batch]
         timer = utils.Timer()

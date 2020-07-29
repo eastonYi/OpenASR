@@ -9,10 +9,7 @@ model:
   type: conv-transformer
   no_eos: False
   signal:
-    feature_type: fbank
-    sample_rate: 16000
-    num_mel_bins: 80
-    use_energy: False
+    feature_type: offline
     spec_aug:
         freq_mask_num: 2
         freq_mask_width: 27

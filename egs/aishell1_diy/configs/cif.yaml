@@ -9,7 +9,7 @@ model:
   type: CIF
   no_eos: True
   signal:
-    feature_type: fbank
+    feature_type: offline
     spec_aug:
         freq_mask_num: 2
         freq_mask_width: 27
