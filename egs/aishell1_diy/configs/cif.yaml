@@ -44,7 +44,7 @@ model:
     activation: "glu"
     dropout_rate: 0.1
 training:
-    batch_frames: 20000
+    batch_frames: 36000
     multi_gpu: False
     exp_dir: exp/cif
     print_inteval: 10
@@ -54,7 +54,7 @@ training:
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    lambda_qua: 0.01
+    lambda_qua: 1.0
     lambda_ctc: 1.0
     num_last_ckpt_keep: 10
     lr_scheduler:

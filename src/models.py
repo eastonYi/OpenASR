@@ -241,7 +241,7 @@ class CIF(Conv_CTC_Transformer):
         # sum
         _num = alphas.sum(-1)
         # scaling
-        num = (target_labels > 0).float().sum(-1)
+        num = target_lengths.float()
         num_noise = num + 0.9 * torch.rand(alphas.size(0)).to(device) - 0.45
         alphas *= (num_noise / _num)[:, None].repeat(1, alphas.size(1))
 
