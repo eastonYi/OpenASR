@@ -71,22 +71,36 @@ def gen_casual_targets(idslist, maxlen, sos_id, eos_id, no_eos=False):
         ids_with_sym_list = [[sos_id]+ids for ids in idslist]
     else:
         ids_with_sym_list = [[sos_id]+ids+[eos_id] for ids in idslist]
-    B = len(idslist)
-    padded_rawids = -torch.ones(B, maxlen+1).long()
 
+    list_tokens = []
+    list_paddings = []
     for b, ids in enumerate(ids_with_sym_list):
         if len(ids) > maxlen:
             logging.warn("ids length {} vs. maxlen {}, cut it.".format(len(ids), maxlen))
         l = min(len(ids), maxlen)
-        padded_rawids[b, :l] = torch.tensor(ids).long()[:l]
-    paddings = (padded_rawids==-1).long()
-    padded_rawids = padded_rawids*(1-paddings) + eos_id*paddings # modify -1 to eos_id
+        list_tokens.append(torch.tensor(ids).long()[:l])
+        list_paddings.append(torch.zeros(l).long())
+
+    padded_rawids = pad_list(list_tokens, eos_id)
+    paddings = pad_list(list_paddings, 1)
 
     labels = padded_rawids[:, 1:]
     ids = padded_rawids[:, :-1]
     paddings = paddings[:, 1:] # the padding is for labels
 
     return ids, labels, paddings
+
+
+def pad_list(xs, pad_value, max_len=None):
+    # From: espnet/src/nets/e2e_asr_th.py: pad_list()
+    n_batch = len(xs)
+    lengths = torch.tensor([x.size(0) for x in xs]).long()
+    max_len = lengths.max() if not max_len else max_len
+    pad = xs[0].new(n_batch, max_len, * xs[0].size()[1:]).fill_(pad_value)
+    for i in range(n_batch):
+        pad[i, :xs[i].size(0)] = xs[i]
+
+    return pad
 
 
 class TextLineByLineDataset(data.Dataset):

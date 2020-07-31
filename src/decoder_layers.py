@@ -15,6 +15,7 @@ limitations under the License.
 """
 import torch.nn as nn
 import torch
+import torch.nn.functional as F
 
 from third_party import transformer
 import utils
@@ -115,13 +116,13 @@ class CIF_Decoder(nn.Module):
     def forward(self, encoder_outputs, decoder_inputs, decoder_input_lengths):
         device = encoder_outputs.device
         B, T, D = encoder_outputs.shape
-        _, T = decoder_inputs.shape
         encoder_output_lengths = decoder_input_lengths
 
         encoder_outputs = encoder_outputs.permute(1, 0, 2) # [S, B, D_e]
 
         src_key_padding_mask = utils.get_transformer_padding_byte_masks(
             B, T, encoder_output_lengths).to(device)
+        casual_masks = utils.get_transformer_casual_masks(T).to(device)
 
         decoder_inputs_emb = self.emb(decoder_inputs) * self.emb_scale
         decoder_inputs_emb = self.pe(decoder_inputs_emb)
@@ -131,11 +132,43 @@ class CIF_Decoder(nn.Module):
         outputs = self.input_affine(torch.cat([encoder_outputs, decoder_inputs_emb], -1))
 
         outputs = self.transformer_block(outputs,
-            src_key_padding_mask=src_key_padding_mask)
+            src_key_padding_mask=src_key_padding_mask,
+            mask=casual_masks)
 
         outputs = torch.cat([encoder_outputs, outputs], -1)
 
         outputs = outputs.permute(1, 0, 2)
         outputs = self.output_affine(outputs)
+
+        return outputs
+
+    def step_forward(self, encoded, len_encoded, decoder_inputs):
+        device = encoded.device
+        B, T, D = encoded.shape
+        _, t = decoder_inputs.shape
+
+        decoder_inputs_pad = F.pad(decoder_inputs, (0, T-t))
+
+        encoded = encoded.permute(1, 0, 2) # [S, B, D_e]
+
+        src_key_padding_mask = utils.get_transformer_padding_byte_masks(
+            B, T, len_encoded).to(device)
+        casual_masks = utils.get_transformer_casual_masks(T).to(device)
+
+        decoder_inputs_emb = self.emb(decoder_inputs_pad) * self.emb_scale
+        decoder_inputs_emb = self.pe(decoder_inputs_emb)
+        decoder_inputs_emb = self.dropout(decoder_inputs_emb)
+        decoder_inputs_emb = decoder_inputs_emb.permute(1, 0, 2)
+
+        outputs = self.input_affine(torch.cat([encoded, decoder_inputs_emb], -1))
+
+        outputs = self.transformer_block(outputs,
+            src_key_padding_mask=src_key_padding_mask,
+            mask=casual_masks)
+
+        outputs = torch.cat([encoded, outputs], -1)
+
+        outputs = outputs.permute(1, 0, 2)
+        outputs = self.output_affine(outputs[:, t-1, :])
 
         return outputs

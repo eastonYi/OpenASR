@@ -47,6 +47,12 @@ class Conv_Transformer(torch.nn.Module):
 
         return outputs
 
+    def get_encoded(self, padded_waveforms, wave_lengths):
+        encoded, len_encoded = self.splayer(padded_waveforms, wave_lengths)
+        encoded, len_encoded = self.encoder(encoded, len_encoded)
+
+        return encoded, len_encoded
+
     def batch_beam_decode(self, encoded, len_encoded, sosid, eosid, beam_size=1, max_decode_len=100):
         batch_size = len_encoded.size(0)
         device = encoded.device
@@ -249,7 +255,7 @@ class CIF(Conv_CTC_Transformer):
 
         return ctc_loss, qua_loss, ce_loss
 
-    def cif(self, hidden, alphas, threshold, log=False):
+    def cif(self, hidden, alphas, threshold=0.95, log=False):
         device = hidden.device
         batch_size, len_time, hidden_size = hidden.size()
 
@@ -301,114 +307,76 @@ class CIF(Conv_CTC_Transformer):
 
         return torch.stack(list_ls, 0)
 
-    def decode(self, batch_wave, lengths, nbest_keep, sosid=1, maxlen=100):
-        if type(nbest_keep) != int:
-            raise ValueError("nbest_keep must be a int.")
-        encoder_outputs, encoder_output_lengths = self._get_acoustic_representations(
-                batch_wave, lengths)
-        target_ids, scores = self._beam_search(encoder_outputs, encoder_output_lengths, nbest_keep, sosid, maxlen)
+    def get_encoded(self, padded_waveforms, wave_lengths):
+        encoded, len_encoded = self.splayer(padded_waveforms, wave_lengths)
+        encoded, len_encoded = self.encoder(encoded, len_encoded)
+        alphas = self.assigner(encoded, len_encoded)
 
-        return target_ids, scores
+        len_encoded = torch.round(alphas.sum(-1)).int()
+        encoded = self.cif(encoded, alphas)
 
-    def _beam_search(self, encoder_outputs, encoder_output_lengths, nbest_keep, sosid):
+        return encoded, len_encoded
 
-        B = encoder_outputs.shape[0]
-        # init
-        init_target_ids = torch.ones(B, 1).to(encoder_outputs.device).long()*sosid
-        init_target_lengths = torch.ones(B).to(encoder_outputs.device).long()
-        outputs = (self.decoder(encoder_outputs, encoder_output_lengths, init_target_ids, init_target_lengths)[:, -1, :])
-        vocab_size = outputs.size(-1)
-        outputs = outputs.view(B, vocab_size)
-        log_probs = F.log_softmax(outputs, dim=-1)
-        topk_res = torch.topk(log_probs, k=nbest_keep, dim=-1)
-        nbest_ids = topk_res[1].view(-1)  #[batch_size*nbest_keep, 1]
-        nbest_logprobs = topk_res[0].view(-1)
+    def batch_beam_decode(self, encoded, len_encoded, sosid, eosid=None, beam_size=1, max_decode_len=None):
+        batch_size = len_encoded.size(0)
+        device = encoded.device
+        d_output = self.decoder.vocab_size
 
-        target_ids = torch.ones(B*nbest_keep, 1).to(encoder_outputs.device).long()*sosid
-        target_lengths = torch.ones(B*nbest_keep).to(encoder_outputs.device).long()
+        # beam search Initialize
+        # repeat each sample in batch along the batch axis [1,2,3,4] -> [1,1,2,2,3,3,4,4]
+        encoded = encoded[:, None, :, :].repeat(1, beam_size, 1, 1) # [batch_size, beam_size, *, hidden_units]
+        encoded = encoded.view(batch_size * beam_size, -1, encoded.size(-1))
+        len_encoded = len_encoded[:, None].repeat(1, beam_size).view(-1) # [batch_size * beam_size]
 
-        target_ids = torch.cat([target_ids, nbest_ids.view(B*nbest_keep, 1)], dim=-1)
-        target_lengths += 1
+        # [[<S>, <S>, ..., <S>]], shape: [batch_size * beam_size, 1]
+        preds = torch.ones([batch_size * beam_size, 1]).long().to(device) * sosid
+        logits = torch.zeros([batch_size * beam_size, 0, d_output]).float().to(device)
+        # the score must be [0, -inf, -inf, ...] at init, for the preds in beam is same in init!!!
+        scores = torch.tensor([0.0] + [-inf] * (beam_size - 1)).float().repeat(batch_size).to(device)  # [batch_size * beam_size]
 
-        ended = []
-        ended_scores = []
-        ended_batch_idx = []
-        for step in range(1, encoder_output_lengths.max()):
-            (nbest_ids, nbest_logprobs, beam_from) = self._decode_single_step(
-                    encoder_outputs, encoder_output_lengths, target_ids, target_lengths, nbest_logprobs)
-            batch_idx = (torch.arange(B)*nbest_keep).view(B, -1).repeat(1, nbest_keep).contiguous().to(beam_from.device)
-            batch_beam_from = (batch_idx + beam_from.view(-1, nbest_keep)).view(-1)
-            nbest_logprobs = nbest_logprobs.view(-1)
-            target_ids = target_ids[batch_beam_from]
-            target_ids = torch.cat([target_ids, nbest_ids.view(B*nbest_keep, 1)], dim=-1)
-            target_lengths += 1
+        # collect the initial states of lstms used in decoder.
+        base_indices = torch.arange(batch_size)[:, None].repeat(1, beam_size).view(-1).to(device)
 
-            for i in range(finished_sel.shape[0]):
-                if finished_sel[i]:
-                    ended.append(target_ids[i])
-                    ended_scores.append(nbest_logprobs[i])
-                    ended_batch_idx.append(i // nbest_keep)
-            target_ids = target_ids * (1 - finished_sel[:, None].long()) # mask out finished
+        for _ in range(encoded.size(1)):
+            # i, preds, scores, logits, len_decoded
+            cur_logits = self.decoder.step_forward(encoded, len_encoded, preds)
+            logits = torch.cat([logits, cur_logits[:, None]], 1)  # [batch*beam, size_output]
+            z = F.log_softmax(cur_logits) # [batch*beam, size_output]
 
-        for i in range(target_ids.shape[0]):
-            ended.append(target_ids[i])
-            ended_scores.append(nbest_logprobs[i])
-            ended_batch_idx.append(i // nbest_keep)
+            # rank the combined scores
+            next_scores, next_preds = torch.topk(z, k=beam_size, sorted=True, dim=-1)
 
-        formated = {}
-        for i in range(B):
-            formated[i] = []
-        for i in range(len(ended)):
-            if ended[i][0] == sosid:
-                formated[ended_batch_idx[i]].append((ended[i], ended_scores[i]))
-        for i in range(B):
-            formated[i] = sorted(formated[i], key=lambda x:x[1], reverse=True)[:nbest_keep]
+            # beamed scores & Pruning
+            scores = scores[:, None] + next_scores  # [batch_size * beam_size, beam_size]
+            scores = scores.view(batch_size, beam_size * beam_size)
 
-        target_ids = torch.zeros(B, nbest_keep, maxlen+1).to(encoder_outputs.device).long()
-        scores = torch.zeros(B, nbest_keep).to(encoder_outputs.device)
-        for i in range(B):
-            for j in range(nbest_keep):
-                item = formated[i][j]
-                l = min(item[0].shape[0], target_ids[i, j].shape[0])
-                target_ids[i, j, :l] = item[0][:l]
-                scores[i, j] = item[1]
+            _, k_indices = torch.topk(scores, k=beam_size)
+            k_indices = base_indices * beam_size * beam_size + k_indices.view(-1)  # [batch_size * beam_size]
+            # Update scores.
+            scores = scores.view(-1)[k_indices]
+            # Update predictions.
+            next_preds = next_preds.view(-1)[k_indices]
 
-        return target_ids, scores
+            # k_indices: [0~batch*beam*beam], preds: [0~batch*beam]
+            # preds, cache_lm, cache_decoder: these data are shared during the beam expand among vocab
+            preds = preds[k_indices // beam_size]
+            preds = torch.cat([preds, next_preds[:, None]], axis=1)  # [batch_size * beam_size, i]
 
-    def _decode_single_step(self, encoder_outputs, encoder_output_lengths, target_ids, target_lengths, accumu_scores, finished_sel=None):
-        """
-        encoder_outputs: [B, T_e, D_e]
-        encoder_output_lengths: [B]
-        target_ids: [B*nbest_keep, T_d]
-        target_lengths: [B*nbest_keep]
-        accumu_scores: [B*nbest_keep]
-        """
-        B, T_e, D_e = encoder_outputs.shape
-        B_d, T_d = target_ids.shape
-        if B_d % B != 0:
-            raise ValueError("The dim of target_ids does not match the encoder_outputs.")
-        nbest_keep = B_d // B
-        encoder_outputs = (encoder_outputs.view(B, 1, T_e, D_e)
-                .repeat(1, nbest_keep, 1, 1).view(B*nbest_keep, T_e, D_e))
-        encoder_output_lengths = (encoder_output_lengths.view(B, 1)
-                .repeat(1, nbest_keep).view(-1))
+        preds = preds[:, 1:]
+        # tf.nn.top_k is used to sort `scores`
+        scores_sorted, sorted = torch.topk(scores.view(batch_size, beam_size),
+                                           k=beam_size, sorted=True)
+        sorted = base_indices * beam_size + sorted.view(-1)  # [batch_size * beam_size]
 
-        # outputs: [B, nbest_keep, vocab_size]
-        outputs = (self.decoder(encoder_outputs, encoder_output_lengths, target_ids, target_lengths)[:, -1, :])
-        vocab_size = outputs.size(-1)
-        outputs = outputs.view(B, nbest_keep, vocab_size)
-        log_probs = F.log_softmax(outputs, dim=-1)  # [B, nbest_keep, vocab_size]
-        if finished_sel is not None:
-            log_probs = log_probs.view(B*nbest_keep, -1) - finished_sel.view(B*nbest_keep, -1).float()*9e9
-            log_probs = log_probs.view(B, nbest_keep, vocab_size)
-        this_accumu_scores = accumu_scores.view(B, nbest_keep, 1) + log_probs
-        topk_res = torch.topk(this_accumu_scores.view(B, nbest_keep*vocab_size), k=nbest_keep, dim=-1)
+        # [batch_size * beam_size, ...] -> [batch_size, beam_size, ...]
+        logits_sorted = logits[sorted].view(batch_size, beam_size, -1, d_output)
+        preds_sorted = preds[sorted].view(batch_size, beam_size, -1) # [batch_size, beam_size, max_length]
+        len_decoded_sorted = len_encoded[sorted].view(batch_size, beam_size)
+        scores_sorted = scores[sorted].view(batch_size, beam_size)
 
-        nbest_logprobs = topk_res[0]  # [B, nbest_keep]
-        nbest_ids = topk_res[1] % vocab_size # [B, nbest_keep]
-        beam_from = (topk_res[1] / vocab_size).long()
-
-        return nbest_ids, nbest_logprobs, beam_from
+        # import pdb; pdb.set_trace()
+        # print('here')
+        return preds_sorted, len_decoded_sorted, scores_sorted
 
     def package(self):
         pkg = {

@@ -34,7 +34,7 @@ def get_args():
     parser.add_argument("vocab_file", help="path to vocabulary file.")
     parser.add_argument("json_file", help="data directory")
     parser.add_argument("output", help="output")
-    parser.add_argument("--feed-batchsize", type=int, default=20, help="batch_size")
+    parser.add_argument("--batch_frames", type=int, default=20, help="batch_size")
     parser.add_argument("--nbest", type=int, default=13, help="nbest")
     parser.add_argument("--maxlen", type=int, default=80, help="max_length")
     parser.add_argument("--offline", type=utils.str2bool, default=False, help=".")
@@ -109,11 +109,11 @@ if __name__ == "__main__":
     if args.offline:
         test_set = data.SpeechDataset(args.json_file)
         collate = data.WaveCollate(tokenizer, 60)
-        validsampler = data.TimeBasedSampler(test_set, args.feed_batchsize, 1, shuffle=False)
+        validsampler = data.TimeBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
     else:
         test_set = data.ArkDataset(args.json_file)
         collate = data.FeatureCollate(tokenizer, 60, args.add_blk)
-        validsampler = data.FrameBasedSampler(test_set, args.feed_batchsize, 1, shuffle=False)
+        validsampler = data.FrameBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
 
     test_loader = torch.utils.data.DataLoader(test_set,
         collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=1)
@@ -128,8 +128,7 @@ if __name__ == "__main__":
             wave_lengths = wave_lengths.cuda()
 
         with torch.no_grad():
-            encoded, len_encoded = model.splayer(padded_waveforms, wave_lengths)
-            encoded, len_encoded = model.encoder(encoded, len_encoded)
+            encoded, len_encoded = model.get_encoded(padded_waveforms, wave_lengths)
             pred_ids, len_decodeds, scores = model.batch_beam_decode(encoded, len_encoded,
                 sosid=1, eosid=2, beam_size=args.nbest, max_decode_len=args.maxlen)
         pred_ids = pred_ids.cpu().numpy()
