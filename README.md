@@ -4,6 +4,19 @@ A pytorch based end2end speech recognition system. The main architecture is [Spe
 
 [中文说明](https://github.com/by2101/OpenASR/blob/master/README_zh.md)
 
+## Results
+Conv-Transformer
+ref len 104765
+sub 6.02
+del 0.24
+ins 0.17
+wer 6.44
+
+| Model | #Snt | #Wrd |   Sub  |  Del  | Ins  |  CER(avg) |
+| :---: | :-: | :----: |:----: |:----: |:----: | :----: |
+| Conv-Transformer | 7176 | 104765 | 6.02  |  0.24 |  0.17  | 6.44 |
+
+
 ## Features
 
 1. **Minimal Dependency**. The system does not depend on external softwares for feature extraction or decoding. Users just install PyTorch deep learning framework.
@@ -48,22 +61,6 @@ Run decode_test.sh script for decoding test set.
 
     bash decode_test.sh
     bash score.sh data/test/text exp/exp1/decode_test_avg-last10
-
-## Visualization
-We provide TensorboardX based visualization. The event files are stored in $expdir/log. You can use tensorboard to visualize the training procedure.
-
-    tensorboard --logdir=$expdir --bind_all
-
-Then you can see procedures in browser (http://localhost:6006).
-
-Examples:
-
-![per token loss in batch](https://github.com/by2101/OpenASR/raw/master/figs/loss.png)
-
-![encoder attention](https://github.com/by2101/OpenASR/raw/master/figs/enc_att.png)
-
-![encoder-decoder attention](https://github.com/by2101/OpenASR/raw/master/figs/dec_enc_att.png)
-
 
 ## Acknowledgement
 This system is implemented with PyTorch. We use wave reading codes from SciPy. We use SCTK software for scoring. Thanks to Dan Povey's team and their KALDI software. I learn ASR concept, and example organization from KALDI. And thanks to Google Lingvo Team. I learn the modular design from Lingvo.

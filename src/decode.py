@@ -67,6 +67,8 @@ if __name__ == "__main__":
         encoder = encoder_layers.Transformer(pkg["model"]["encoder_config"])
         decoder = decoder_layers.TransformerDecoder(pkg["model"]["decoder_config"])
 
+        model = Model(splayer, encoder, decoder)
+
     elif args.model_type.lower() == 'conv-ctc-transformer':
         import sp_layers
         import encoder_layers
@@ -126,17 +128,20 @@ if __name__ == "__main__":
             wave_lengths = wave_lengths.cuda()
 
         with torch.no_grad():
-            target_ids, scores = model.decode(padded_waveforms, wave_lengths, nbest_keep=args.nbest, maxlen=args.maxlen)
-        all_ids_batch = target_ids.cpu().numpy()
-        all_score_batch = scores.cpu().numpy()
-        for i in range(all_ids_batch.shape[0]):
+            encoded, len_encoded = model.splayer(padded_waveforms, wave_lengths)
+            encoded, len_encoded = model.encoder(encoded, len_encoded)
+            pred_ids, len_decodeds, scores = model.batch_beam_decode(encoded, len_encoded,
+                sosid=1, eosid=2, beam_size=args.nbest, max_decode_len=args.maxlen)
+        pred_ids = pred_ids.cpu().numpy()
+        len_decodeds = len_decodeds.cpu().tolist()
+        scores = scores.cpu().numpy()
+        for i, (n_pred_ids, n_len_decodeds, n_scores) in enumerate(zip(pred_ids, len_decodeds, scores)):
             utt = utts[i]
             msg = "Results for {}:\n".format(utt)
-            for h in range(all_ids_batch.shape[1]):
-                hyp = tokenizer.decode(all_ids_batch[i, h])
-                score = all_score_batch[i, h]
-                msg += "top{}: {} score: {:.10f}\n".format(h+1, hyp, score)
-                if h == 0:
+            for j, (pred_id, len_decoded, score) in enumerate(zip(n_pred_ids, n_len_decodeds, n_scores)):
+                hyp = tokenizer.decode(pred_id, split_token=False)
+                msg += "top{}: {} score: {:.10f}\n".format(j+1, hyp, score)
+                if j == 0:
                     fd.write("{} {}\n".format(utt, hyp))
             logging.info("\n"+msg)
         tot_utt += len(utts)

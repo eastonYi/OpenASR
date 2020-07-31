@@ -12,8 +12,8 @@ def cal_ctc_loss(logits_ctc, len_logits_ctc, targets, target_lengths):
 
 
 def cal_qua_loss(_number, number):
-    # qua_loss = torch.sqrt(torch.pow(_number - number, 2).sum())
-    qua_loss = torch.pow(_number - number, 2).sum()
+    qua_loss = torch.sqrt(torch.pow(_number - number, 2).sum())
+    # qua_loss = torch.pow(_number - number, 2).sum()
 
     return qua_loss
 

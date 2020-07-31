@@ -24,7 +24,7 @@ from third_party import kaldi_signal as ksp
 class SPLayer(nn.Module):
 
     def __init__(self, config):
-        super(SPLayer, self).__init__()
+        super().__init__()
         self.config = config
         self.feature_type = config["feature_type"]
         if "spec_aug" in config:

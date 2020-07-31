@@ -10,7 +10,7 @@ ep=${4:?"avg-last10"}
 decode_dir=$expdir/decode_test_${ep}
 mkdir -p $decode_dir
 
-CUDA_VISIBLE_DEVICES=$2 \
+CUDA_VISIBLE_DEVICES=$gpu \
 python -W ignore::UserWarning $SRC_ROOT/decode.py \
     --feed-batchsize 80 \
     --nbest 5 \
