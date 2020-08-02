@@ -109,7 +109,8 @@ if __name__ == "__main__":
     elif modelconfig['type'] == 'CIF':
         import sp_layers
         import encoder_layers
-        import attention_assigner
+        # import attention_assigner
+        from attention_assigner import Attention_Assigner_2D as Attention_Assigner
         import decoder_layers
         from models import CIF as Model
 
@@ -117,7 +118,7 @@ if __name__ == "__main__":
 
         splayer = sp_layers.SPLayer(modelconfig["signal"])
         encoder = encoder_layers.Transformer(modelconfig["encoder"])
-        assigner = attention_assigner.Attention_Assigner(modelconfig["assigner"])
+        assigner = Attention_Assigner(modelconfig["assigner"])
         decoder = decoder_layers.CIF_Decoder(modelconfig["decoder"])
 
         model = Model(splayer, encoder, assigner, decoder)

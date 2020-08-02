@@ -138,7 +138,7 @@ if __name__ == "__main__":
             utt = utts[i]
             msg = "Results for {}:\n".format(utt)
             for j, (pred_id, len_decoded, score) in enumerate(zip(n_pred_ids, n_len_decodeds, n_scores)):
-                hyp = tokenizer.decode(pred_id, split_token=False)
+                hyp = tokenizer.decode(pred_id[:len_decoded], split_token=False)
                 msg += "top{}: {} score: {:.10f}\n".format(j+1, hyp, score)
                 if j == 0:
                     fd.write("{} {}\n".format(utt, hyp))

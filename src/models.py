@@ -246,7 +246,6 @@ class CIF(Conv_CTC_Transformer):
         alphas *= (num_noise / _num)[:, None].repeat(1, alphas.size(1))
 
         cif_outputs = self.cif(encoder_outputs, alphas, threshold=threshold)
-
         logits = self.decoder(cif_outputs, target_ids, target_lengths)
 
         ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, target_labels, target_lengths)

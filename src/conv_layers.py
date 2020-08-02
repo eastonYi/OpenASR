@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import torch
+import math
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.normalization import LayerNorm
@@ -44,6 +45,37 @@ class Conv1d(nn.Module):
                                1*(self.w_context-1)-1)/self.subsample + 1).long()
 
         return outputs, output_lengths
+
+
+class Conv2d(torch.nn.Module):
+    def __init__(self, d_input, d_model, layer_num=2):
+        super().__init__()
+        assert layer_num >= 1
+        self.layer_num = d_input
+        layers = [("Conv2d/conv0", torch.nn.Conv2d(1, 32, 3, (1, 1))),
+                ("Conv2d/relu0", torch.nn.ReLU())]
+        for i in range(layer_num-1):
+            layers += [
+                ("Conv2d/conv{}".format(i+1), torch.nn.Conv2d(32, 32, 1, (1, 1))),
+                ("Conv2d/relu{}".format(i+1), torch.nn.ReLU())
+            ]
+        layers = OrderedDict(layers)
+        self.conv = torch.nn.Sequential(layers)
+        self.affine = torch.nn.Linear(32 * d_input, d_model)
+
+    def forward(self, feats, feat_lengths):
+        D = feats.size(-1)
+        feats = F.pad(feats, (0, 20, 0, 20))
+        B = feats.size(0)
+        T = feat_lengths.max()
+        V = 32 * D
+        outputs = feats.unsqueeze(1)  # [B, C, T, D]
+        outputs = self.conv(outputs)
+        # B, C, T, D = outputs.size()
+        outputs = outputs.permute(0, 2, 1, 3)[:, :T, :, :D].contiguous().view(B, T, V)
+        outputs = self.affine(outputs)
+
+        return outputs, feat_lengths
 
 
 class Conv1dSubsample(torch.nn.Module):
@@ -109,6 +141,7 @@ class Conv2dSubsampleV2(torch.nn.Module):
         outputs = self.conv(outputs)
         B, C, T, D = outputs.size()
         outputs = outputs.permute(0, 2, 1, 3).contiguous().view(B, T, C*D)
+
         outputs = self.affine(outputs)
         output_lengths = feat_lengths
         for _ in range(self.layer_num):
