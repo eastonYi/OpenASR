@@ -1,10 +1,10 @@
-# continue_training:
+continue_training:
 data:
-  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1_diy/data/test_ark_small.json
-  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1_diy/data/test_ark_small.json
-  vocab_path: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1/data/aishell1_train_chars.txt
-  maxlen: 60
-  fetchworker_num: 1
+  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train
+  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/dev.json
+  vocab_path: /data3/easton/data/CALLHOME_Multilingual/jsons/callhome.IPA
+  maxlen: 200
+  fetchworker_num: 4
 model:
   type: CIF
   no_eos: True
@@ -30,7 +30,7 @@ model:
     dropout_rate: 0.1
   assigner:
     d_model: 512
-    n_layers: 3
+    n_layers: 1
     w_context: 3
     dropout: 0.1
   decoder:
@@ -44,20 +44,20 @@ model:
     activation: "glu"
     dropout_rate: 0.1
 training:
-    batch_frames: 600
+    label_type: phone
+    batch_frames: 36000
     multi_gpu: False
     exp_dir: exp/cif
-
-    print_inteval: 10
+    print_inteval: 50
     num_epoch: 80
     accumulate_grad_batch: 8
     init_lr: 1.0
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    lambda_qua: 0.1
+    lambda_qua: 1.0
     lambda_ctc: 1.0
-    num_last_ckpt_keep: 1
+    num_last_ckpt_keep: 10
     lr_scheduler:
         type: "warmup_transformer"
         warmup_step: 10000

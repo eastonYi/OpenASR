@@ -235,9 +235,9 @@ class CIF(Conv_CTC_Transformer):
         encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
         encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
         ctc_logits = self.ctc_fc(encoder_outputs)
+
         len_logits_ctc = encoder_output_lengths
         alphas = self.assigner(encoder_outputs, encoder_output_lengths)
-
         # sum
         _num = alphas.sum(-1)
         # scaling

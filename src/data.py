@@ -15,6 +15,7 @@ limitations under the License.
 """
 import logging
 import json
+import os
 import numpy as np
 import torch
 import torch.utils.data as data
@@ -133,9 +134,21 @@ class SpeechDataset(data.Dataset):
 
 
 class ArkDataset(SpeechDataset):
-    def __init__(self, data_json_path, reverse=False):
-        with open(data_json_path, 'rb') as f:
-            data = json.load(f)
+    def __init__(self, json_path, reverse=False):
+        try:
+            # json_path is a single file
+            with open(json_path) as f:
+                data = json.load(f)
+        except:
+            # json_path is a dir where *.json in
+            data = []
+            for dir, _, fs in os.walk(os.path.dirname(json_path)):   # os.walk获取所有的目录
+                for f in fs:
+                    if f.endswith('.json'):  # 判断是否是".json"结尾
+                        filename = os.path.join(dir, f)
+                        with open(filename) as f:
+                            data.extend(json.load(f))
+                            
         self.data = sorted(data, key=lambda x: float(x["input_length"]))
         if reverse:
             self.data.reverse()
@@ -272,15 +285,19 @@ class WaveCollate(object):
 
 
 class FeatureCollate(object):
-    def __init__(self, tokenizer, maxlen, no_eos=False):
+    def __init__(self, tokenizer, maxlen, no_eos=False, label_type='trans'):
         self.tokenizer = tokenizer
         self.maxlen = maxlen
         self.no_eos = no_eos
+        self.label_type = label_type
 
     def __call__(self, batch):
         utts = [d["uttid"] for d in batch]
         paths = [d["feat"] for d in batch]
-        trans = [d["trans"] for d in batch]
+        if self.label_type == 'trans':
+            trans = [d["trans"] for d in batch]
+        elif self.label_type == 'phone':
+            trans = [d["phone"] for d in batch]
         timer = utils.Timer()
         timer.tic()
         padded_features, feature_lengths = load_feat_batch(paths)
@@ -306,3 +323,11 @@ def kaldi_feat_collate(batch):
     paths = [d[1] for d in batch]
     padded_data, lengths = load_feat_batch(paths)
     return utts, padded_data, lengths
+
+
+if __name__ == '__main__':
+    paths = ['/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:102502',
+             '/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:102502',
+             '/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:102502',
+             '/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:24']
+    load_feat_batch(paths)

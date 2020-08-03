@@ -1,9 +1,9 @@
 # continue_training:
 data:
-  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1_diy/data/test_ark_small.json
-  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1_diy/data/test_ark_small.json
-  vocab_path: /Users/easton/Projects/OpenASR_BaiYe/egs/aishell1/data/aishell1_train_chars.txt
-  maxlen: 60
+  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train/
+  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/dev/ja.json
+  vocab_path: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/callhome.IPA
+  maxlen: 200
   fetchworker_num: 1
 model:
   type: CIF
@@ -44,10 +44,10 @@ model:
     activation: "glu"
     dropout_rate: 0.1
 training:
-    batch_frames: 600
+    label_type: phone
+    batch_frames: 1000
     multi_gpu: False
     exp_dir: exp/cif
-
     print_inteval: 10
     num_epoch: 80
     accumulate_grad_batch: 8

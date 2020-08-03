@@ -49,8 +49,7 @@ if __name__ == "__main__":
 
     args = get_args()
     timer.tic()
-    with open(args.config) as f:
-        config = yaml.load(f)
+    config = utils.AttrDict(yaml.load(open(args.config)))
     dataconfig = config["data"]
     trainingconfig = config["training"]
     modelconfig = config["model"]
@@ -109,8 +108,8 @@ if __name__ == "__main__":
     elif modelconfig['type'] == 'CIF':
         import sp_layers
         import encoder_layers
-        # import attention_assigner
-        from attention_assigner import Attention_Assigner_2D as Attention_Assigner
+        from attention_assigner import Attention_Assigner
+        # from attention_assigner import Attention_Assigner_2D as Attention_Assigner
         import decoder_layers
         from models import CIF as Model
 

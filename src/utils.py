@@ -12,6 +12,32 @@ from third_party import wavfile
 TENSORBOARD_LOGGING = 0
 
 
+class AttrDict(dict):
+    """
+    Dictionary whose keys can be accessed as attributes.
+    demo:
+    a ={'length': 10, 'shape': (2,3)}
+    config = AttrDict(a)
+    config.length #10
+
+    here we can recurrently use attribute to access confis
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __getattr__(self, item):
+        try:
+            if type(self[item]) is dict:
+                self[item] = AttrDict(self[item])
+            res = self[item]
+        except:
+
+            print('not found {}'.format(item))
+            res = None
+        return res
+
+
 def load_vocab(path, vocab_size=None):
     with open(path, encoding='utf8') as f:
         vocab = [line.strip().split()[0] for line in f]
