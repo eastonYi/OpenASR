@@ -39,7 +39,8 @@ class Transformer(torch.nn.Module):
         if self.subconf["type"] == "ConvV1":
             self.sub = Conv2dSubsample(self.input_dim, self.d_model)
         elif self.subconf["type"] == "ConvV2":
-            self.sub = Conv2dSubsampleV2(self.input_dim, self.d_model, self.subconf["layer_num"])
+            self.subsample = self.subconf["subsample"]
+            self.sub = Conv2dSubsampleV2(self.input_dim, self.d_model, self.subconf["layer_num"], self.subsample)
         elif self.subconf["type"] == "Stack":
             self.context_width = config["context_width"]
             self.subsample = config["subsample"]

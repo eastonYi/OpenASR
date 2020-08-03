@@ -121,17 +121,36 @@ class Conv2dSubsample(torch.nn.Module):
 
 
 class Conv2dSubsampleV2(torch.nn.Module):
-    def __init__(self, d_input, d_model, layer_num=2):
+    def __init__(self, d_input, d_model, layer_num=2, downsample=8):
         super().__init__()
         assert layer_num >= 1
         self.layer_num = layer_num
-        layers = [("subsample/conv0", torch.nn.Conv2d(1, 32, 3, (2, 1))),
-                ("subsample/relu0", torch.nn.ReLU())]
-        for i in range(layer_num-1):
-            layers += [
-                ("subsample/conv{}".format(i+1), torch.nn.Conv2d(32, 32, 3, (2, 1))),
-                ("subsample/relu{}".format(i+1), torch.nn.ReLU())
-            ]
+        if downsample == 8:
+            layers = [("subsample/conv0", torch.nn.Conv2d(1, 32, 3, (2, 1))),
+                      ("subsample/relu0", torch.nn.ReLU())]
+            for i in range(layer_num-1):
+                layers += [
+                    ("subsample/conv{}".format(i+1), torch.nn.Conv2d(32, 32, 3, (2, 1))),
+                    ("subsample/relu{}".format(i+1), torch.nn.ReLU())
+                ]
+        elif downsample == 4:
+            layers = [("subsample/conv0", torch.nn.Conv2d(1, 32, 3, (2, 1))),
+                      ("subsample/relu0", torch.nn.ReLU()),
+                      ("subsample/conv1", torch.nn.Conv2d(1, 32, 3, (2, 1))),
+                      ("subsample/relu1", torch.nn.ReLU())]
+            for i in range(2, layer_num):
+                layers += [
+                    ("subsample/conv{}".format(i), torch.nn.Conv2d(32, 32, 3, (2, 1))),
+                    ("subsample/relu{}".format(i), torch.nn.ReLU())
+                ]
+        elif downsample == 2:
+            layers = [("subsample/conv0", torch.nn.Conv2d(1, 32, 3, (2, 1))),
+                      ("subsample/relu0", torch.nn.ReLU())]
+            for i in range(1, layer_num):
+                layers += [
+                    ("subsample/conv{}".format(i), torch.nn.Conv2d(32, 32, 3, (1, 1))),
+                    ("subsample/relu{}".format(i), torch.nn.ReLU())
+                ]
         layers = OrderedDict(layers)
         self.conv = torch.nn.Sequential(layers)
         self.affine = torch.nn.Linear(32 * (d_input-2*layer_num), d_model)

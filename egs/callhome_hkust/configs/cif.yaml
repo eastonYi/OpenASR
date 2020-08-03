@@ -20,6 +20,7 @@ model:
     type: Transformer
     sub:
       type: ConvV2
+      subsample: 4
       layer_num: 2
     input_dim: 80
     d_model: 512
@@ -45,7 +46,7 @@ model:
     dropout_rate: 0.1
 training:
     label_type: phone
-    batch_frames: 36000
+    batch_frames: 30000
     multi_gpu: False
     exp_dir: exp/cif
     print_inteval: 50
