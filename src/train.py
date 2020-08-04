@@ -84,7 +84,7 @@ if __name__ == "__main__":
         import decoder_layers
         from models import Conv_Transformer as Model
 
-        from trainer import Trainer
+        from CE_Trainer import Trainer
 
         splayer = sp_layers.SPLayer(modelconfig["signal"])
         encoder = encoder_layers.Transformer(modelconfig["encoder"])
