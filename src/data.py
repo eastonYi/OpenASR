@@ -304,10 +304,12 @@ class FeatureCollate(object):
     def __call__(self, batch):
         utts = [d["uttid"] for d in batch]
         paths = [d["feat"] for d in batch]
-        if self.label_type == 'trans':
-            trans = [d["token"] for d in batch]
+        if self.label_type == 'token':
+            trans = [d["tokens"] for d in batch]
         elif self.label_type == 'phone':
-            trans = [d["phone"] for d in batch]
+            trans = [d["phones"] for d in batch]
+        else:
+            raise NotImplementedError(self.label_type)
         timer = utils.Timer()
         timer.tic()
         padded_features, feature_lengths = load_feat_batch(paths)

@@ -39,6 +39,7 @@ model:
     activation: "glu"
     dropout_rate: 0.1
 training:
+    label_type: token
     batch_frames: 20000
     multi_gpu: False
     exp_dir: exp/conv-transformer
