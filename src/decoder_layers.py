@@ -172,3 +172,25 @@ class CIF_Decoder(nn.Module):
         outputs = self.output_affine(outputs[:, t-1, :])
 
         return outputs
+
+
+class FC_Decoder(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+
+        self.d_input = config["d_input"]
+        self.vocab_size = config["vocab_size"]
+
+        self.output_affine = nn.Linear(self.d_input, self.vocab_size)
+        nn.init.xavier_normal_(self.output_affine.weight)
+
+    def forward(self, encoder_outputs):
+        outputs = self.output_affine(encoder_outputs)
+
+        return outputs
+
+    def step_forward(self, encoded, t):
+        outputs = self.output_affine(encoded[:, t, :])
+
+        return outputs

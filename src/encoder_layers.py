@@ -35,16 +35,19 @@ class Transformer(torch.nn.Module):
         self.num_layers = config["num_layers"]
         self.dropout_rate = config["dropout_rate"]
         self.activation = config["activation"]
+
         self.subconf = config["sub"]
-        if self.subconf["type"] == "ConvV1":
-            self.sub = Conv2dSubsample(self.input_dim, self.d_model)
-        elif self.subconf["type"] == "ConvV2":
-            self.subsample = self.subconf["subsample"]
-            self.sub = Conv2dSubsampleV2(self.input_dim, self.d_model, self.subconf["layer_num"], self.subsample)
-        elif self.subconf["type"] == "Stack":
-            self.context_width = config["context_width"]
-            self.subsample = config["subsample"]
-            self.sub = Conv1dSubsample(self.input_dim, self.d_model, self.context_width, self.subsample)
+        if self.subconf:
+            if self.subconf["type"] == "ConvV1":
+                self.sub = Conv2dSubsample(self.input_dim, self.d_model)
+            elif self.subconf["type"] == "ConvV2":
+                self.sub = Conv2dSubsampleV2(self.input_dim, self.d_model, self.subconf["layer_num"])
+            elif self.subconf["type"] == "Stack":
+                self.context_width = config["context_width"]
+                self.subsample = config["subsample"]
+                self.sub = Conv1dSubsample(self.input_dim, self.d_model, self.context_width, self.subsample)
+        else:
+            self.affine = torch.nn.Linear(self.input_dim, self.d_model)
 
         self.scale = self.d_model ** 0.5
 
@@ -57,7 +60,11 @@ class Transformer(torch.nn.Module):
         self.transformer_encoder = transformer.TransformerEncoder(encoder_layer, self.num_layers, encoder_norm)
 
     def forward(self, feats, feat_lengths):
-        outputs, output_lengths = self.sub(feats, feat_lengths)
+        if self.subconf:
+            outputs, output_lengths = self.sub(feats, feat_lengths)
+        else:
+            outputs, output_lengths = self.affine(feats), feat_lengths
+
         outputs = self.dropout(self.pe(outputs))
 
         B, T, D_o = outputs.shape

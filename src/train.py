@@ -63,7 +63,7 @@ if __name__ == "__main__":
     if modelconfig['signal']["feature_type"] == 'offline':
         training_set = data.ArkDataset(dataconfig["trainset"])
         valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
-        collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"])
+        collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"], trainingconfig["label_type"])
         trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
         validsampler = data.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
     else:
@@ -112,6 +112,22 @@ if __name__ == "__main__":
         # from attention_assigner import Attention_Assigner_2D as Attention_Assigner
         import decoder_layers
         from models import CIF as Model
+
+        from trainer import CIF_Trainer as Trainer
+
+        splayer = sp_layers.SPLayer(modelconfig["signal"])
+        encoder = encoder_layers.Transformer(modelconfig["encoder"])
+        assigner = Attention_Assigner(modelconfig["assigner"])
+        decoder = decoder_layers.CIF_Decoder(modelconfig["decoder"])
+
+        model = Model(splayer, encoder, assigner, decoder)
+
+    elif modelconfig['type'] == 'CIF_MIX':
+        import sp_layers
+        import encoder_layers
+        from attention_assigner import Attention_Assigner
+        import decoder_layers
+        from models import CIF_MIX as Model
 
         from trainer import CIF_Trainer as Trainer
 

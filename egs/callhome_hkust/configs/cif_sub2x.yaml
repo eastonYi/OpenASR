@@ -3,7 +3,7 @@ data:
   trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train
   devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/dev.json
   vocab_path: /data3/easton/data/CALLHOME_Multilingual/jsons/callhome.IPA
-  maxlen: 200
+  maxlen: 999
   fetchworker_num: 4
 model:
   type: CIF
@@ -20,14 +20,13 @@ model:
     type: Transformer
     sub:
       type: ConvV2
-      subsample: 4
-      layer_num: 2
+      layer_num: 1
     input_dim: 80
     d_model: 512
     nhead: 8
     dim_feedforward: 2048
     activation: "glu"
-    num_layers: 6
+    num_layers: 4
     dropout_rate: 0.1
   assigner:
     d_model: 512
@@ -39,20 +38,20 @@ model:
     vocab_size: -1 # derived by tokenizer
     d_model: 512
     nhead: 8
-    num_layers: 6
+    num_layers: 4
     encoder_dim: 512
     dim_feedforward: 2048
     activation: "glu"
     dropout_rate: 0.1
 training:
     label_type: phone
-    batch_frames: 30000
+    batch_frames: 8000
     multi_gpu: False
     exp_dir: exp/cif
     print_inteval: 50
     num_epoch: 80
-    accumulate_grad_batch: 8
-    init_lr: 1.0
+    accumulate_grad_batch: 1
+    init_lr: 0.1
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1

@@ -7,7 +7,8 @@ data:
   fetchworker_num: 4
 model:
   type: conv-transformer
-  no_eos: False
+  no_eos: True
+  add_blk: False
   signal:
     feature_type: offline
     spec_aug:
@@ -40,8 +41,8 @@ model:
 training:
     batch_frames: 20000
     multi_gpu: False
-    exp_dir: exp/base
-    print_inteval: 10
+    exp_dir: exp/conv-transformer
+    print_inteval: 500
     num_epoch: 80
     accumulate_grad_batch: 8
     init_lr: 1.0
@@ -50,6 +51,6 @@ training:
     label_smooth: 0.1
     num_last_ckpt_keep: 10
     lr_scheduler:
-        type: "warmup_transformer"
+        type: warmup_transformer
         warmup_step: 10000
         d_model: 512

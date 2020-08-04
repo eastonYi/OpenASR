@@ -20,14 +20,13 @@ model:
     type: Transformer
     sub:
       type: ConvV2
-      subsample: 4
-      layer_num: 2
+      layer_num: 1
     input_dim: 80
     d_model: 512
-    nhead: 8
+    nhead: 2
     dim_feedforward: 2048
     activation: "glu"
-    num_layers: 6
+    num_layers: 1
     dropout_rate: 0.1
   assigner:
     d_model: 512
@@ -35,15 +34,9 @@ model:
     w_context: 3
     dropout: 0.1
   decoder:
-    type: TransformerDecoder
+    type: FC
     vocab_size: -1 # derived by tokenizer
-    d_model: 512
-    nhead: 8
-    num_layers: 6
     encoder_dim: 512
-    dim_feedforward: 2048
-    activation: "glu"
-    dropout_rate: 0.1
 training:
     label_type: phone
     batch_frames: 1000
@@ -51,7 +44,7 @@ training:
     exp_dir: exp/cif
     print_inteval: 10
     num_epoch: 80
-    accumulate_grad_batch: 8
+    accumulate_grad_batch: 2
     init_lr: 1.0
     optimtype: adam
     grad_max_norm: 50.

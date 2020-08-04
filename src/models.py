@@ -419,3 +419,147 @@ class CIF(Conv_CTC_Transformer):
         self.assigner.load_state_dict(pkg["assigner_state"])
         self.decoder.load_state_dict(pkg["decoder_state"])
         self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
+
+
+class CIF_MIX(CIF):
+    def __init__(self, splayer, encoder, assigner, fc, decoder):
+        super().__init__(splayer, encoder, decoder)
+        self.phone_fc = fc
+        self._reset_parameters()
+
+    def forward(self, batch_wave, lengths, phone, phone_paddings,
+                target_input, targets=None, target_paddings=None, label_smooth=0., threshold=0.95):
+        device = batch_wave.device
+        phone_lengths = torch.sum(1-phone_paddings, dim=-1).long()
+        target_lengths = torch.sum(1-target_paddings, dim=-1).long()
+
+        encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
+        encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
+        ctc_logits = self.ctc_fc(encoder_outputs)
+
+        len_logits_ctc = encoder_output_lengths
+        alphas = self.assigner(encoder_outputs, encoder_output_lengths)
+
+        # sum
+        _num = alphas.sum(-1)
+        # scaling
+        num = phone_lengths.float()
+        num_noise = num + 0.9 * torch.rand(alphas.size(0)).to(device) - 0.45
+        alphas *= (num_noise / _num)[:, None].repeat(1, alphas.size(1))
+
+        cif_outputs = self.cif(encoder_outputs, alphas, threshold=threshold)
+        cif_outputs_lengths = phone_lengths
+
+        logits_IPA = self.phone_fc(cif_outputs)
+        logits = self.decoder(cif_outputs, cif_outputs_lengths, target_input, target_lengths)
+
+        ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, phone, phone_lengths)
+        qua_loss = cal_qua_loss(_num, num)
+        ce_phone_loss = cal_ce_loss(logits_IPA, phone, phone_paddings, label_smooth)
+        ce_target_loss = cal_ce_loss(logits, targets, target_paddings, label_smooth)
+
+        return ctc_loss, qua_loss, ce_phone_loss, ce_target_loss
+
+    def batch_beam_decode(self, encoded, len_encoded, sosid, eosid=None, beam_size=1, max_decode_len=None):
+        batch_size = len_encoded.size(0)
+        device = encoded.device
+        d_output = self.decoder.vocab_size
+
+        # beam search Initialize
+        # repeat each sample in batch along the batch axis [1,2,3,4] -> [1,1,2,2,3,3,4,4]
+        encoded = encoded[:, None, :, :].repeat(1, beam_size, 1, 1) # [batch_size, beam_size, *, hidden_units]
+        encoded = encoded.view(batch_size * beam_size, -1, encoded.size(-1))
+        len_encoded = len_encoded[:, None].repeat(1, beam_size).view(-1) # [batch_size * beam_size]
+
+        # [[<S>, <S>, ..., <S>]], shape: [batch_size * beam_size, 1]
+        preds = torch.ones([batch_size * beam_size, 1]).long().to(device) * sosid
+        logits = torch.zeros([batch_size * beam_size, 0, d_output]).float().to(device)
+        # the score must be [0, -inf, -inf, ...] at init, for the preds in beam is same in init!!!
+        scores = torch.tensor([0.0] + [-inf] * (beam_size - 1)).float().repeat(batch_size).to(device)  # [batch_size * beam_size]
+
+        # collect the initial states of lstms used in decoder.
+        base_indices = torch.arange(batch_size)[:, None].repeat(1, beam_size).view(-1).to(device)
+
+        for _ in range(encoded.size(1)):
+            # i, preds, scores, logits, len_decoded
+            cur_logits = self.decoder.step_forward(encoded, len_encoded, preds)
+            logits = torch.cat([logits, cur_logits[:, None]], 1)  # [batch*beam, size_output]
+            z = F.log_softmax(cur_logits) # [batch*beam, size_output]
+
+            # rank the combined scores
+            next_scores, next_preds = torch.topk(z, k=beam_size, sorted=True, dim=-1)
+
+            # beamed scores & Pruning
+            scores = scores[:, None] + next_scores  # [batch_size * beam_size, beam_size]
+            scores = scores.view(batch_size, beam_size * beam_size)
+
+            _, k_indices = torch.topk(scores, k=beam_size)
+            k_indices = base_indices * beam_size * beam_size + k_indices.view(-1)  # [batch_size * beam_size]
+            # Update scores.
+            scores = scores.view(-1)[k_indices]
+            # Update predictions.
+            next_preds = next_preds.view(-1)[k_indices]
+
+            # k_indices: [0~batch*beam*beam], preds: [0~batch*beam]
+            # preds, cache_lm, cache_decoder: these data are shared during the beam expand among vocab
+            preds = preds[k_indices // beam_size]
+            preds = torch.cat([preds, next_preds[:, None]], axis=1)  # [batch_size * beam_size, i]
+
+        preds = preds[:, 1:]
+        # tf.nn.top_k is used to sort `scores`
+        scores_sorted, sorted = torch.topk(scores.view(batch_size, beam_size),
+                                           k=beam_size, sorted=True)
+        sorted = base_indices * beam_size + sorted.view(-1)  # [batch_size * beam_size]
+
+        # [batch_size * beam_size, ...] -> [batch_size, beam_size, ...]
+        logits_sorted = logits[sorted].view(batch_size, beam_size, -1, d_output)
+        preds_sorted = preds[sorted].view(batch_size, beam_size, -1) # [batch_size, beam_size, max_length]
+        len_decoded_sorted = len_encoded[sorted].view(batch_size, beam_size)
+        scores_sorted = scores[sorted].view(batch_size, beam_size)
+
+        # import pdb; pdb.set_trace()
+        # print('here')
+        return preds_sorted, len_decoded_sorted, scores_sorted
+
+    def package(self):
+        pkg = {
+            "splayer_config": self.splayer.config,
+            "splayer_state": self.splayer.state_dict(),
+            "encoder_config": self.encoder.config,
+            "encoder_state": self.encoder.state_dict(),
+            "assigner_config": self.assigner.config,
+            "assigner_state": self.assigner.state_dict(),
+            "decoder_config": self.decoder.config,
+            "decoder_state": self.decoder.state_dict(),
+            "ctc_fc_state": self.ctc_fc.state_dict(),
+            "phone_fc_state": self.ctc_fc.state_dict(),
+             }
+        return pkg
+
+    def restore(self, pkg):
+        # check config
+        logging.info("Restore model states...")
+        for key in self.splayer.config.keys():
+            if key == "spec_aug":
+                continue
+            if self.splayer.config[key] != pkg["splayer_config"][key]:
+                raise ValueError("splayer_config mismatch.")
+        for key in self.encoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.encoder.config[key] != pkg["encoder_config"][key]):
+                raise ValueError("encoder_config mismatch.")
+        for key in self.assigner.config.keys():
+            if (key != "dropout_rate" and
+                    self.assigner.config[key] != pkg["assigner_config"][key]):
+                raise ValueError("assigner_config mismatch.")
+        for key in self.decoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.decoder.config[key] != pkg["decoder_config"][key]):
+                raise ValueError("decoder_config mismatch.")
+
+        self.splayer.load_state_dict(pkg["splayer_state"])
+        self.encoder.load_state_dict(pkg["encoder_state"])
+        self.assigner.load_state_dict(pkg["assigner_state"])
+        self.decoder.load_state_dict(pkg["decoder_state"])
+        self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
+        self.phone_fc.load_state_dict(pkg["phone_fc_state"])

@@ -53,7 +53,7 @@ class CharTokenizer(object):
         return [self.unit2id[char]
             if char in self.unit2id
             else self.unit2id[UNK_SYM]
-            for char in list(textline.strip())]
+            for char in list(textline.strip().split())]
 
     def decode(self, ids, split_token=True, remove_special_sym=True):
         syms = [self.id2unit[i] for i in ids]
@@ -134,7 +134,7 @@ class SpeechDataset(data.Dataset):
 
 
 class ArkDataset(SpeechDataset):
-    def __init__(self, json_path, reverse=False):
+    def __init__(self, json_path, reverse=False, rate_in_out=(4,999)):
         try:
             # json_path is a single file
             with open(json_path) as f:
@@ -148,7 +148,17 @@ class ArkDataset(SpeechDataset):
                         filename = os.path.join(dir, f)
                         with open(filename) as f:
                             data.extend(json.load(f))
-                            
+        # filter
+        if rate_in_out:
+            list_to_pop = []
+            for i, sample in enumerate(data):
+                len_x = sample['input_length']
+                len_y = sample['output_length']
+                if len_x < 1 or len_y < 1 or not (rate_in_out[0] <= (len_x / len_y) <= rate_in_out[1]):
+                    list_to_pop.append(i)
+            list_to_pop.reverse()
+            [data.pop(i) for i in list_to_pop]
+
         self.data = sorted(data, key=lambda x: float(x["input_length"]))
         if reverse:
             self.data.reverse()
@@ -295,7 +305,7 @@ class FeatureCollate(object):
         utts = [d["uttid"] for d in batch]
         paths = [d["feat"] for d in batch]
         if self.label_type == 'trans':
-            trans = [d["trans"] for d in batch]
+            trans = [d["token"] for d in batch]
         elif self.label_type == 'phone':
             trans = [d["phone"] for d in batch]
         timer = utils.Timer()
