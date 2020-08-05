@@ -141,8 +141,8 @@ if __name__ == "__main__":
     logging.info("\nModel info:\n{}".format(model))
 
     if args.continue_training:
-        logging.info("Load package from {}.".format(os.path.join(trainingconfig["exp_dir"], "last-ckpt.pt")))
-        pkg = torch.load(os.path.join(trainingconfig["exp_dir"], "last-ckpt.pt"))
+        logging.info("Load package from {}.".format(os.path.join(trainingconfig["exp_dir"], "last.pt")))
+        pkg = torch.load(os.path.join(trainingconfig["exp_dir"], "last.pt"))
         model.restore(pkg["model"])
 
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:

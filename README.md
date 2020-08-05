@@ -60,7 +60,7 @@ Average checkpoints for improving performance.
 Run decode_test.sh script for decoding test set.
 
     bash decode_test.sh
-    bash score.sh data/test/text exp/exp1/decode_test_avg-last10
+    bash score.sh data/test/text exp/exp1/decode_test_avg10
 
 ## Acknowledgement
 This system is implemented with PyTorch. We use wave reading codes from SciPy. We use SCTK software for scoring. Thanks to Dan Povey's team and their KALDI software. I learn ASR concept, and example organization from KALDI. And thanks to Google Lingvo Team. I learn the modular design from Lingvo.

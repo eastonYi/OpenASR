@@ -1,6 +1,4 @@
 import os
-import sys
-import subprocess
 import numpy as np
 import torch
 
@@ -14,14 +12,14 @@ def test_cleanup():
     for i in range(120):
         with open(os.path.join(expdir, "ckpt-{:04d}.pt".format(i)), 'w') as f:
             f.write("")
-    with open(os.path.join(expdir, "last-ckpt.pt"), 'w') as f:
+    with open(os.path.join(expdir, "last.pt"), 'w') as f:
             f.write("")
     utils.cleanup_ckpt(expdir, 3)
     len(os.listdir(expdir)) == 4
 
 
 def test_read_wave_from_pipe():
-    command = "flac -c -d -s testdata/100-121669-0000.flac " 
+    command = "flac -c -d -s testdata/100-121669-0000.flac "
     output = utils.get_command_stdout(command)
     with open("testdata/100-121669-0000.wav", 'rb') as f:
         wav_content = f.read()
@@ -43,9 +41,9 @@ def test_load_wave():
     s1, d1 = utils.load_wave(pipe)
     print("Load flac pipe time: {}s".format(timer.toc()))
     print("Load ark2")
-    
+
     s, d = utils.load_wave(ark2)
-    
+
     assert s1 == s2
     assert s3 == s2
     assert np.sum(d1!=d2) == 0
@@ -69,6 +67,3 @@ if __name__ == "__main__":
     test_load_wave()
     test_get_transformer_casual_masks()
     test_get_transformer_padding_byte_masks()
-
-
-

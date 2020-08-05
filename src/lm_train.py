@@ -24,7 +24,7 @@ import torch
 if "LAS_LOG_LEVEL" in os.environ:
     LOG_LEVEL = os.environ["LAS_LOG_LEVEL"]
 else:
-    LOG_LEVEL = "INFO" 
+    LOG_LEVEL = "INFO"
 if LOG_LEVEL == "DEBUG":
     logging.basicConfig(
         level=logging.DEBUG,
@@ -54,9 +54,9 @@ def get_args():
 if __name__ == "__main__":
     timer = utils.Timer()
     args = get_args()
-    timer.tic()    
+    timer.tic()
     with open(args.config) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)       
+        config = yaml.load(f, Loader=yaml.FullLoader)
     dataconfig = config["data"]
     trainingconfig = config["training"]
     modelconfig = config["model"]
@@ -68,17 +68,17 @@ if __name__ == "__main__":
     else:
         raise ValueError("Unknown tokenizer.")
 
-    
-    modelconfig['vocab_size'] = tokenizer.unit_num() 
+
+    modelconfig['vocab_size'] = tokenizer.unit_num()
     collate = data.TextCollate(tokenizer, dataconfig["maxlen"])
- 
-    ngpu = 1 
+
+    ngpu = 1
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
-       
-    tr_loader = torch.utils.data.DataLoader(training_set, 
+
+    tr_loader = torch.utils.data.DataLoader(training_set,
         collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=True, num_workers=dataconfig["fetchworker_num"])
-    cv_loader = torch.utils.data.DataLoader(valid_set, 
+    cv_loader = torch.utils.data.DataLoader(valid_set,
         collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
     if modelconfig["type"] == "lstm":
@@ -87,25 +87,24 @@ if __name__ == "__main__":
         raise ValueError("Unknown model")
 
     model = models.LM(lmlayer)
-    logging.info("\nModel info:\n{}".format(model))   
-    
+    logging.info("\nModel info:\n{}".format(model))
+
     if args.continue_training:
-        logging.info("Load package from {}.".format(os.path.join(trainingconfig["exp_dir"], "last-ckpt.pt")))
-        pkg = torch.load(os.path.join(trainingconfig["exp_dir"], "last-ckpt.pt")) 
-        model.restore(pkg["model"])        
- 
+        logging.info("Load package from {}.".format(os.path.join(trainingconfig["exp_dir"], "last.pt")))
+        pkg = torch.load(os.path.join(trainingconfig["exp_dir"], "last.pt"))
+        model.restore(pkg["model"])
+
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         logging.info("Let's use {} GPUs!".format(torch.cuda.device_count()))
         model = torch.nn.DataParallel(model)
 
     model = model.cuda()
-    
+
     trainer = LmTrainer(model, trainingconfig, tr_loader, cv_loader)
-    
+
     if args.continue_training:
         logging.info("Restore trainer states...")
         trainer.restore(pkg)
     logging.info("Start training...")
     trainer.train()
     logging.info("Total time: {:.4f} mins".format(timer.toc()/60.))
-

@@ -59,7 +59,7 @@ def load_vocab(path, vocab_size=None):
 
 
 def cleanup_ckpt(expdir, num_last_ckpt_keep):
-    ckptlist = [t for t in os.listdir(expdir) if t.endswith('.pt') and t != 'last-ckpt.pt']
+    ckptlist = [t for t in os.listdir(expdir) if t.endswith('.pt') and t != 'last.pt']
     ckptlist = sorted(ckptlist)
     ckptlist_rm = ckptlist[:-num_last_ckpt_keep]
     logging.info("Clean up checkpoints. Remain the last {} checkpoints.".format(num_last_ckpt_keep))

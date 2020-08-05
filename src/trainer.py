@@ -126,7 +126,7 @@ class Trainer(object):
             msg += "-"*85
             logging.info(msg)
             self.save(os.path.join(self.exp_dir, "ep-{:04d}.pt".format(self.epoch)))
-            self.save(os.path.join(self.exp_dir, "last-ckpt.pt"))
+            self.save(os.path.join(self.exp_dir, "last.pt"))
             logging.info("Validation")
             cv_loss = self.iter_one_epoch(cross_valid=True)
 

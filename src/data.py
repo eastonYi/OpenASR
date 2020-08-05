@@ -67,11 +67,11 @@ class CharTokenizer(object):
         return len(self.unit2id)
 
 
-def gen_casual_targets(idslist, maxlen, sos_id, eos_id, no_eos=False):
-    if no_eos:
-        ids_with_sym_list = [[sos_id]+ids for ids in idslist]
-    else:
+def gen_casual_targets(idslist, maxlen, sos_id, eos_id, add_eos):
+    if add_eos:
         ids_with_sym_list = [[sos_id]+ids+[eos_id] for ids in idslist]
+    else:
+        ids_with_sym_list = [[sos_id]+ids for ids in idslist]
 
     list_tokens = []
     list_paddings = []
@@ -272,10 +272,10 @@ class TextCollate(object):
 
 
 class WaveCollate(object):
-    def __init__(self, tokenizer, maxlen, no_eos=False):
+    def __init__(self, tokenizer, maxlen, add_eos=False):
         self.tokenizer = tokenizer
         self.maxlen = maxlen
-        self.no_eos = no_eos
+        self.add_eos = add_eos
 
     def __call__(self, batch):
         utts = [d["utt"] for d in batch]
@@ -288,25 +288,25 @@ class WaveCollate(object):
         timer.tic()
         rawids_list = [self.tokenizer.encode(t) for t in trans]
         ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
-                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.no_eos)
+                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.add_eos)
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
 
         return utts, padded_waveforms, wave_lengths, ids, labels, paddings
 
 
 class FeatureCollate(object):
-    def __init__(self, tokenizer, maxlen, no_eos=False, label_type='trans'):
+    def __init__(self, tokenizer, maxlen, add_eos=False, label_type='trans'):
         self.tokenizer = tokenizer
         self.maxlen = maxlen
-        self.no_eos = no_eos
+        self.add_eos = add_eos
         self.label_type = label_type
 
     def __call__(self, batch):
         utts = [d["uttid"] for d in batch]
         paths = [d["feat"] for d in batch]
-        if self.label_type == 'token':
+        if self.label_type == 'tokens':
             trans = [d["tokens"] for d in batch]
-        elif self.label_type == 'phone':
+        elif self.label_type == 'phones':
             trans = [d["phones"] for d in batch]
         else:
             raise NotImplementedError(self.label_type)
@@ -317,7 +317,7 @@ class FeatureCollate(object):
         timer.tic()
         rawids_list = [self.tokenizer.encode(t) for t in trans]
         ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
-                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.no_eos)
+                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.add_eos)
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
 
         return utts, padded_features, feature_lengths, ids, labels, paddings

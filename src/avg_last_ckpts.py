@@ -54,15 +54,6 @@ if __name__ == "__main__":
             if k.endswith("_state"):
                 for key in pkg["model"][k].keys():
                     pkg["model"][k][key] += pkg_tmp["model"][k][key]/len(fnckpts)
-    fn_save = os.path.join(args.expdir, "avg-last{}.pt".format(len(fnckpts)))
+    fn_save = os.path.join(args.expdir, "avg{}.pt".format(len(fnckpts)))
     logging.info("Save averaged model to {}.".format(fn_save))
     torch.save(pkg, fn_save)
-       
-
-    
-
-
-
-
-
-

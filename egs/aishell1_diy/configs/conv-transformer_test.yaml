@@ -7,7 +7,7 @@ data:
   fetchworker_num: 1
 model:
   type: conv-transformer
-  no_eos: False
+  add_eos: False
   add_blk: False
   signal:
     feature_type: offline
