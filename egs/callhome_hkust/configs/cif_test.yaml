@@ -38,7 +38,7 @@ model:
     vocab_size: -1 # derived by tokenizer
     encoder_dim: 512
 training:
-    label_type: phone
+    label_type: phones
     batch_frames: 1000
     multi_gpu: False
     exp_dir: exp/cif
