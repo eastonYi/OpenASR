@@ -79,64 +79,38 @@ if __name__ == "__main__":
         collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
     if modelconfig['type'] == 'conv-transformer':
-        import sp_layers
-        import encoder_layers
-        import decoder_layers
-        from models import Conv_Transformer as Model
+        from frameworks.Speech_Models import Conv_Transformer as Model
+        from solvers import CE_Solver as Solver
 
-        from trainer import CE_Trainer as Trainer
-
-        splayer = sp_layers.SPLayer(modelconfig["signal"])
-        encoder = encoder_layers.Transformer(modelconfig["encoder"])
-        decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
-
-        model = Model(splayer, encoder, decoder)
+        model = Model.create_model(modelconfig["signal"],
+                                   modelconfig["encoder"],
+                                   modelconfig["decoder"])
 
     elif modelconfig['type'] == 'conv-ctc-transformer':
-        import sp_layers
-        import encoder_layers
-        import decoder_layers
-        from models import Conv_CTC_Transformer as Model
-        from trainer import CTC_CE_Trainer as Trainer
+        from frameworks.Speech_Models import Conv_CTC_Transformer as Model
+        from solvers import CTC_CE_Solver as Solver
 
-        splayer = sp_layers.SPLayer(modelconfig["signal"])
-        encoder = encoder_layers.Transformer(modelconfig["encoder"])
-        decoder = decoder_layers.TransformerDecoder(modelconfig["decoder"])
-
-        model = Model(splayer, encoder, decoder)
+        model = Model.create_model(modelconfig["signal"],
+                                   modelconfig["encoder"],
+                                   modelconfig["decoder"])
 
     elif modelconfig['type'] == 'CIF':
-        import sp_layers
-        import encoder_layers
-        from attention_assigner import Attention_Assigner
-        # from attention_assigner import Attention_Assigner_2D as Attention_Assigner
-        import decoder_layers
-        from models import CIF as Model
+        from frameworks.Speech_Models import CIF as Model
+        from solvers import CIF_Solver as Solver
 
-        from trainer import CIF_Trainer as Trainer
-
-        splayer = sp_layers.SPLayer(modelconfig["signal"])
-        encoder = encoder_layers.Transformer(modelconfig["encoder"])
-        assigner = Attention_Assigner(modelconfig["assigner"])
-        decoder = decoder_layers.CIF_Decoder(modelconfig["decoder"])
-
-        model = Model(splayer, encoder, assigner, decoder)
+        model = Model.create_model(modelconfig["signal"],
+                                   modelconfig["encoder"],
+                                   modelconfig["assigner"],
+                                   modelconfig["decoder"])
 
     elif modelconfig['type'] == 'CIF_MIX':
-        import sp_layers
-        import encoder_layers
-        from attention_assigner import Attention_Assigner
-        import decoder_layers
-        from models import CIF_MIX as Model
+        from frameworks.Speech_Models import CIF_MIX as Model
+        from solvers import CIF_Solver as Solver
 
-        from trainer import CIF_Trainer as Trainer
-
-        splayer = sp_layers.SPLayer(modelconfig["signal"])
-        encoder = encoder_layers.Transformer(modelconfig["encoder"])
-        assigner = Attention_Assigner(modelconfig["assigner"])
-        decoder = decoder_layers.CIF_Decoder(modelconfig["decoder"])
-
-        model = Model(splayer, encoder, assigner, decoder)
+        model = Model.create_model(modelconfig["signal"],
+                                   modelconfig["encoder"],
+                                   modelconfig["assigner"],
+                                   modelconfig["decoder"])
 
     logging.info("\nModel info:\n{}".format(model))
 
@@ -152,11 +126,11 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         model = model.cuda()
 
-    trainer = Trainer(model, trainingconfig, tr_loader, cv_loader)
+    solver = Solver(model, trainingconfig, tr_loader, cv_loader)
 
     if args.continue_training:
-        logging.info("Restore trainer states...")
-        trainer.restore(pkg)
+        logging.info("Restore solver states...")
+        solver.restore(pkg)
     logging.info("Start training...")
-    trainer.train()
+    solver.train()
     logging.info("Total time: {:.4f} secs".format(timer.toc()))

@@ -2,7 +2,7 @@ continue_training:
 data:
   trainset: /home/easton/projects/OpenASR/egs/aishell1_diy/data/train.json
   devset: /home/easton/projects/OpenASR/egs/aishell1_diy/data/dev.json
-  vocab_path: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/s5/data/aishell1_train_chars.txt
+  vocab_path: /home/easton/projects/OpenASR_BaiYe/egs/aishell1/data/aishell1_train_chars.txt
   maxlen: 60
   fetchworker_num: 4
 model:
