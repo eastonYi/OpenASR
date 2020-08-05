@@ -63,13 +63,13 @@ if __name__ == "__main__":
     if modelconfig['signal']["feature_type"] == 'offline':
         training_set = data.ArkDataset(dataconfig["trainset"])
         valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
-        collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"], trainingconfig["label_type"])
+        collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"], trainingconfig["label_type"])
         trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
         validsampler = data.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
     else:
         training_set = data.SpeechDataset(dataconfig["trainset"])
         valid_set = data.SpeechDataset(dataconfig["devset"], reverse=True)
-        collate = data.WaveCollate(tokenizer, dataconfig["maxlen"], modelconfig["no_eos"])
+        collate = data.WaveCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"])
         trainingsampler = data.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
         validsampler = data.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
 
