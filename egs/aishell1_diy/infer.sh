@@ -13,6 +13,7 @@ python -W ignore::UserWarning $SRC_ROOT/infer.py \
     --batch_frames 10000 \
     --nbest 5 \
     --use_gpu True \
+    --label_type tokens \
     $model_type \
     $expdir/${ep}.pt \
     data/aishell1_train_chars.txt \

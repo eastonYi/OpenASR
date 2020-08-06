@@ -21,7 +21,6 @@ import torch
 import utils
 import data
 
-
 if "LAS_LOG_LEVEL" in os.environ:
     LOG_LEVEL = os.environ["LAS_LOG_LEVEL"]
 else:
@@ -56,24 +55,14 @@ if __name__ == "__main__":
     modelconfig = config["model"]
 
     ngpu = 1
-    if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
-        ngpu = torch.cuda.device_count()
 
     tokenizer = data.CharTokenizer(dataconfig["vocab_path"], add_blk=modelconfig['add_blk'])
     modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
-    if modelconfig['signal']["feature_type"] == 'offline':
-        training_set = data.ArkDataset(dataconfig["trainset"])
-        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
-        collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"], trainingconfig["label_type"])
-        trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
-        validsampler = data.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
-    else:
-        training_set = data.SpeechDataset(dataconfig["trainset"])
-        valid_set = data.SpeechDataset(dataconfig["devset"], reverse=True)
-        collate = data.WaveCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"])
-        trainingsampler = data.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
-        validsampler = data.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
-
+    training_set = data.ArkDataset(dataconfig["trainset"])
+    valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
+    collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"], trainingconfig["label_type"])
+    trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
+    validsampler = data.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
     tr_loader = torch.utils.data.DataLoader(training_set,
         collate_fn=collate, batch_sampler=trainingsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
     cv_loader = torch.utils.data.DataLoader(valid_set,
@@ -85,32 +74,6 @@ if __name__ == "__main__":
 
         model = Model.create_model(modelconfig["signal"],
                                    modelconfig["encoder"],
-                                   modelconfig["decoder"])
-
-    elif modelconfig['type'] == 'conv-ctc-transformer':
-        from frameworks.Speech_Models import Conv_CTC_Transformer as Model
-        from solvers import CTC_CE_Solver as Solver
-
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   modelconfig["decoder"])
-
-    elif modelconfig['type'] == 'CIF':
-        from frameworks.Speech_Models import CIF as Model
-        from solvers import CIF_Solver as Solver
-
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   modelconfig["assigner"],
-                                   modelconfig["decoder"])
-
-    elif modelconfig['type'] == 'CIF_MIX':
-        from frameworks.Speech_Models import CIF_MIX as Model
-        from solvers import CIF_Solver as Solver
-
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   modelconfig["assigner"],
                                    modelconfig["decoder"])
 
     logging.info("\nModel info:\n{}".format(model))
