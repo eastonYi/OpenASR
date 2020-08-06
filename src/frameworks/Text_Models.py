@@ -104,6 +104,15 @@ class Embed_Decoder(torch.nn.Module):
         # print('here')
         return preds_sorted, len_decoded_sorted, scores_sorted
 
+    @classmethod
+    def create_model(cls, de_config):
+        from blocks.decoders import TransformerDecoder
+
+        decoder = TransformerDecoder(de_config)
+        model = cls(decoder)
+
+        return model
+
     def package(self):
         pkg = {
             "emb_input": self.emb_input.state_dict(),

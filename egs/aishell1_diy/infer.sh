@@ -10,7 +10,7 @@ mkdir -p $decode_dir
 
 CUDA_VISIBLE_DEVICES=$gpu \
 python -W ignore::UserWarning $SRC_ROOT/infer.py \
-    --batch_frames 10000 \
+    --batch_frames 140000 \
     --nbest 5 \
     --use_gpu True \
     --label_type tokens \

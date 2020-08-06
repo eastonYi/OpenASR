@@ -101,11 +101,11 @@ if __name__ == "__main__":
     model.eval()
 
     if args.offline:
-        test_set = data.SpeechDataset(args.json_file)
+        test_set = data.SpeechDataset(args.json_file, rate_in_out=None)
         collate = data.WaveCollate(tokenizer, 60)
         validsampler = data.TimeBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
     else:
-        test_set = data.ArkDataset(args.json_file)
+        test_set = data.ArkDataset(args.json_file, rate_in_out=None)
         collate = data.FeatureCollate(tokenizer, 60, args.add_blk, label_type=args.label_type)
         validsampler = data.FrameBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
 

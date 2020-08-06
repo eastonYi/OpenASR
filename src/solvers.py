@@ -466,3 +466,78 @@ class CIF_Solver(Solver):
         torch.cuda.empty_cache()
         time.sleep(2)
         return (tot_loss/tot_token).item()
+
+
+class Phone2Char_Solver(Solver):
+
+    def iter_one_epoch(self, cross_valid=False):
+        if cross_valid:
+            loader = self.cv_loader
+            self.model.eval()
+        else:
+            loader = self.tr_loader
+            self.model.train()
+
+        timer = utils.Timer()
+        timer.tic()
+        tot_loss = 0.
+        tot_token = 0
+        tot_sequence = 0
+
+        n_accu_batch = self.accumulate_grad_batch
+
+        tot_iter_num = len(loader)
+        for niter, data in enumerate(loader):
+            niter += 1
+            utts, xs_in, len_xs, target_in, target, paddings = data
+            import pdb; pdb.set_trace()
+
+            if cross_valid:
+                with torch.no_grad():
+                    ce_loss = self.model(xs_in.to(self.device),
+                            len_xs.long().to(self.device),
+                            target_in.long().to(self.device),
+                            target.long().to(self.device),
+                            paddings.long().to(self.device))
+            else:
+                ce_loss = self.model(xs_in.to(self.device),
+                        len_xs.long().to(self.device),
+                        target_in.long().to(self.device),
+                        target.long().to(self.device),
+                        paddings.long().to(self.device),
+                        label_smooth=self.label_smooth)
+
+            n_token = torch.sum(1-paddings).float()
+            tot_token += n_token
+            n_sequence = len(utts)
+            tot_sequence += n_sequence
+
+            loss = ce_loss.sum()/n_token
+            tot_loss += ce_loss
+
+            # compute gradients
+            if not cross_valid:
+                if n_accu_batch == self.accumulate_grad_batch:
+                    self.optimizer.zero_grad()
+                loss.backward()
+                n_accu_batch -= 1
+                if n_accu_batch == 0 or niter == tot_iter_num:
+                    self.step += 1  # to be consistant with metric
+                    clip_grad_norm_(self.model.parameters(), self.grad_max_norm)
+                    self.lr_scheduler.step()   # then, update learning rate
+                    self.lr_scheduler.set_lr(self.optimizer, self.init_lr)
+                    self.optimizer.step()
+                    n_accu_batch = self.accumulate_grad_batch
+                else:
+                    continue
+
+            timer.toc()
+            if niter % self.print_inteval == 0:
+                print('Epoch {} | Step {} | Iter {} batch {} \nall_loss/token: {:.3f} ce_loss/token: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
+                    self.epoch, self.step, niter, list(xs_in.size()),
+                    loss, tot_loss / tot_token, list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
+                ), flush=True)
+
+        torch.cuda.empty_cache()
+        time.sleep(2)
+        return (tot_loss/tot_token).item()

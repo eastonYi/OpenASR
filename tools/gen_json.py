@@ -51,7 +51,7 @@ if __name__ == '__main__':
             sample['tokens'] = uttid2trans[uttid]
             sample['phones'] = uttid2phones[uttid]
             sample['input_length'] = uttid2num_frames[uttid]
-            sample['output_length'] = len(sample['tokens'])
+            sample['output_length'] = len(sample['tokens'].split())
         except:
             print('skip', uttid)
             continue

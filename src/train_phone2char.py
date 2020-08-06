@@ -56,25 +56,22 @@ if __name__ == "__main__":
 
     ngpu = 1
 
-    tokenizer = data.CharTokenizer(dataconfig["vocab_path"], add_blk=modelconfig['add_blk'])
-    modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
-    training_set = data.ArkDataset(dataconfig["trainset"])
-    valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
-    collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"], trainingconfig["label_type"])
-    trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
-    validsampler = data.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
+    tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=False)
+    tokenizer_char = data.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
+    modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
+    training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
+    valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
+    collate = data.Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
     tr_loader = torch.utils.data.DataLoader(training_set,
-        collate_fn=collate, batch_sampler=trainingsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
+        collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=2)
     cv_loader = torch.utils.data.DataLoader(valid_set,
-        collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
+        collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=1)
 
-    if modelconfig['type'] == 'conv-transformer':
-        from frameworks.Speech_Models import Conv_Transformer as Model
-        from solvers import CE_Solver as Solver
+    if modelconfig['type'] == 'Embed_Decoder':
+        from frameworks.Text_Models import Embed_Decoder as Model
+        from solvers import Phone2Char_Solver as Solver
 
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   modelconfig["decoder"])
+        model = Model.create_model(modelconfig["decoder"])
 
     logging.info("\nModel info:\n{}".format(model))
 
@@ -82,10 +79,6 @@ if __name__ == "__main__":
         logging.info("Load package from {}.".format(os.path.join(trainingconfig["exp_dir"], "last.pt")))
         pkg = torch.load(os.path.join(trainingconfig["exp_dir"], "last.pt"))
         model.restore(pkg["model"])
-
-    if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
-        logging.info("Let's use {} GPUs!".format(torch.cuda.device_count()))
-        model = torch.nn.DataParallel(model)
 
     if torch.cuda.is_available():
         model = model.cuda()

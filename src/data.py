@@ -92,7 +92,7 @@ def gen_casual_targets(idslist, maxlen, sos_id, eos_id, add_eos):
     return ids, labels, paddings
 
 
-def pad_list(xs, pad_value, max_len=None):
+def pad_list(xs, pad_value, max_len=None, return_length=False):
     # From: espnet/src/nets/e2e_asr_th.py: pad_list()
     n_batch = len(xs)
     lengths = torch.tensor([x.size(0) for x in xs]).long()
@@ -101,7 +101,10 @@ def pad_list(xs, pad_value, max_len=None):
     for i in range(n_batch):
         pad[i, :xs[i].size(0)] = xs[i]
 
-    return pad
+    if return_length:
+        return pad, pad.ne(pad_value).long().sum(-1)
+    else:
+        return pad
 
 
 class TextLineByLineDataset(data.Dataset):
@@ -321,6 +324,25 @@ class FeatureCollate(object):
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
 
         return utts, padded_features, feature_lengths, ids, labels, paddings
+
+
+class Phone_Char_Collate(object):
+    def __init__(self, tokenizer_phone, tokenizer_char, add_eos=False):
+        self.tokenizer_phone = tokenizer_phone
+        self.tokenizer_char = tokenizer_char
+        self.add_eos = add_eos
+
+    def __call__(self, batch):
+        utts = [d["uttid"] for d in batch]
+
+        phones = [torch.tensor(self.tokenizer_phone.encode(d["phones"])).long() for d in batch]
+        xs_in, len_xs = pad_list(phones, pad_value=0, return_length=True)
+
+        tokens = [self.tokenizer_char.encode(d["tokens"]) for d in batch]
+        target_in, target_out, paddings = gen_casual_targets(tokens, 999,
+                self.tokenizer_char.to_id(SOS_SYM), self.tokenizer_char.to_id(EOS_SYM), self.add_eos)
+
+        return utts, xs_in, len_xs, target_in, target_out, paddings
 
 
 def kaldi_wav_collate(batch):
