@@ -457,7 +457,7 @@ class CIF_Solver(Solver):
 
 class Phone2Char_Solver(Solver):
 
-    def iter_one_epoch(self, cross_valid='loss'):
+    def iter_one_epoch(self, cross_valid=False):
         if cross_valid:
             loader = self.cv_loader
             self.model.eval()

@@ -87,7 +87,7 @@ def compute_linear_intep(x, x0, y0, x1, y1):
 
 class LinearLearningRateSchedule(BaseLearningRateSchedule):
     def __init__(self, conf):
-        super(LinearLearningRateSchedule, self).__init__()
+        super().__init__()
         self.config = {
                 "x0": conf["x0"],
                 "y0": conf["y0"],
@@ -104,7 +104,7 @@ class LinearLearningRateSchedule(BaseLearningRateSchedule):
 
 class WarmupLinearLearningRateSchedule(LinearLearningRateSchedule):
     def __init__(self, conf):
-        super(WarmupLinearLearningRateSchedule, self).__init__(conf)
+        super().__init__(conf)
         self.config["warmup_step"] = conf["warmup_step"]
 
     def update_decay_rate(self):
@@ -117,7 +117,7 @@ class WarmupLinearLearningRateSchedule(LinearLearningRateSchedule):
 
 class WarmupTransformerLearningRateSchedule(BaseLearningRateSchedule):
     def __init__(self, conf):
-        super(WarmupTransformerLearningRateSchedule, self).__init__()
+        super().__init__()
         self.config = {}
         self.config["warmup_step"] = conf["warmup_step"]
         self.config["d_model"] = conf["d_model"]

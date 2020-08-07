@@ -10,8 +10,6 @@ model:
   type: Embed_Decoder
   add_eos: True
   add_blk: False
-  signal:
-    feature_type: offline
   decoder:
     type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer
@@ -24,17 +22,17 @@ model:
     dropout_rate: 0.1
 training:
     label_type: phones_chars
-    batch_size: 80
+    batch_size: 800
     multi_gpu: False
     exp_dir: exp/pinyin2char
     print_inteval: 10
     num_epoch: 80
-    accumulate_grad_batch: 1
+    accumulate_grad_batch: 8
     init_lr: 0.1
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    num_last_ckpt_keep: 1
+    num_last_ckpt_keep: 10
     lr_scheduler:
         type: warmup_transformer
         warmup_step: 10000
