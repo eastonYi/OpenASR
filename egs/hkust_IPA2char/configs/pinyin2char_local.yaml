@@ -1,0 +1,41 @@
+continue_training:
+data:
+  trainset: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/train.json
+  devset: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/dev.json
+  vocab_phone: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/callhome.IPA
+  vocab_char: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/vocab.char
+  maxlen: 999
+  fetchworker_num: 4
+model:
+  type: Embed_Decoder
+  add_eos: True
+  add_blk: False
+  signal:
+    feature_type: offline
+  decoder:
+    type: TransformerDecoder
+    vocab_size: -1 # derived by tokenizer
+    d_model: 512
+    nhead: 8
+    num_layers: 4
+    encoder_dim: 512
+    dim_feedforward: 2048
+    activation: "glu"
+    dropout_rate: 0.1
+training:
+    label_type: phones_chars
+    batch_size: 80
+    multi_gpu: False
+    exp_dir: exp/pinyin2char
+    print_inteval: 10
+    num_epoch: 80
+    accumulate_grad_batch: 1
+    init_lr: 0.1
+    optimtype: adam
+    grad_max_norm: 50.
+    label_smooth: 0.1
+    num_last_ckpt_keep: 1
+    lr_scheduler:
+        type: warmup_transformer
+        warmup_step: 10000
+        d_model: 512
