@@ -474,9 +474,9 @@ class Phone2Char_Solver(Solver):
         n_accu_batch = self.accumulate_grad_batch
 
         tot_iter_num = len(loader)
-        for niter, data in enumerate(loader):
+        for niter, (utts, data) in enumerate(loader):
             niter += 1
-            utts, xs_in, len_xs, target_in, target, paddings = (i.to(self.device) for i in data)
+            xs_in, len_xs, target_in, target, paddings = (i.to(self.device) for i in data)
 
             if cross_valid:
                 with torch.no_grad():

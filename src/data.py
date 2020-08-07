@@ -295,7 +295,7 @@ class WaveCollate(object):
                 self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.add_eos)
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
 
-        return utts, padded_waveforms, wave_lengths, ids, labels, paddings
+        return utts, (padded_waveforms, wave_lengths, ids, labels, paddings)
 
 
 class FeatureCollate(object):
@@ -324,7 +324,7 @@ class FeatureCollate(object):
                 self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.add_eos)
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
 
-        return utts, padded_features, feature_lengths, ids, labels, paddings
+        return utts, (padded_features, feature_lengths, ids, labels, paddings)
 
 
 class Phone_Char_Collate(object):
@@ -343,7 +343,7 @@ class Phone_Char_Collate(object):
         target_in, target_out, paddings = gen_casual_targets(tokens, 999,
                 self.tokenizer_char.to_id(SOS_SYM), self.tokenizer_char.to_id(EOS_SYM), self.add_eos)
 
-        return utts, xs_in, len_xs, target_in, target_out, paddings
+        return utts, (xs_in, len_xs, target_in, target_out, paddings)
 
 
 def kaldi_wav_collate(batch):
