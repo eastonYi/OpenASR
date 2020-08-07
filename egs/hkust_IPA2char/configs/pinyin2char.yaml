@@ -1,9 +1,9 @@
 continue_training:
 data:
-  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/train.json
-  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/dev.json
-  vocab_phone: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/callhome.IPA
-  vocab_char: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/vocab.char
+  trainset: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/train.json
+  devset: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/dev.json
+  vocab_phone: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/callhome.IPA
+  vocab_char: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/vocab.char
   maxlen: 999
   fetchworker_num: 4
 model:
