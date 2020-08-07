@@ -13,9 +13,9 @@ inf = 1e10
 
 
 class Embed_Decoder(torch.nn.Module):
-    def __init__(self, decoder):
+    def __init__(self, encoder, decoder):
         super().__init__()
-        self.emb_input = nn.Embedding(decoder.vocab_size, decoder.d_model)
+        self.encoder = encoder
         self.decoder = decoder
         self._reset_parameters()
 
@@ -28,7 +28,7 @@ class Embed_Decoder(torch.nn.Module):
         return loss
 
     def get_logits(self, tokens_input, len_input, target_input, len_targets):
-        encoded = self.emb_input(tokens_input)
+        encoded = self.encoder(tokens_input)
         outputs = self.decoder(encoded, len_input, target_input, len_targets)
 
         return outputs
@@ -105,17 +105,19 @@ class Embed_Decoder(torch.nn.Module):
         return preds_sorted, len_decoded_sorted, scores_sorted
 
     @classmethod
-    def create_model(cls, de_config):
+    def create_model(cls, en_config, de_config):
         from blocks.decoders import TransformerDecoder
 
+        encoder = nn.Embedding(en_config['vocab_size'], en_config['d_model'])
         decoder = TransformerDecoder(de_config)
-        model = cls(decoder)
+        model = cls(encoder, decoder)
 
         return model
 
     def package(self):
         pkg = {
-            "emb_input": self.emb_input.state_dict(),
+            "encoder_config": self.encoder.config,
+            "encoder_state": self.encoder.state_dict(),
             "decoder_config": self.decoder.config,
             "decoder_state": self.decoder.state_dict(),
              }

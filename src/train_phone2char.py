@@ -58,6 +58,7 @@ if __name__ == "__main__":
 
     tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=False)
     tokenizer_char = data.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
+    modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
     modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
     training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
     valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
@@ -71,7 +72,7 @@ if __name__ == "__main__":
         from frameworks.Text_Models import Embed_Decoder as Model
         from solvers import Phone2Char_Solver as Solver
 
-        model = Model.create_model(modelconfig["decoder"])
+        model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
 
     logging.info("\nModel info:\n{}".format(model))
 

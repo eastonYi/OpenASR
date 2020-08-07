@@ -10,6 +10,9 @@ model:
   type: Embed_Decoder
   add_eos: True
   add_blk: False
+  encoder:
+    vocab_size: -1 # derived by tokenizer
+    d_model: 512
   decoder:
     type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer
@@ -22,10 +25,10 @@ model:
     dropout_rate: 0.1
 training:
     label_type: phones_chars
-    batch_size: 800
+    batch_size: 200
     multi_gpu: False
     exp_dir: exp/pinyin2char
-    print_inteval: 10
+    print_inteval: 50
     num_epoch: 80
     accumulate_grad_batch: 8
     init_lr: 0.1

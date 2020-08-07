@@ -10,8 +10,9 @@ model:
   type: Embed_Decoder
   add_eos: True
   add_blk: False
-  signal:
-    feature_type: offline
+  encoder:
+    vocab_size: -1
+    d_model: 512
   decoder:
     type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer
