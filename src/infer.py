@@ -116,7 +116,7 @@ if __name__ == "__main__":
     tot_timer = utils.Timer()
     tot_utt = 0
     tot_timer.tic()
-    for utts, padded_waveforms, wave_lengths, ids, labels, paddings in test_loader:
+    for utts, (padded_waveforms, wave_lengths, ids, labels, paddings) in test_loader:
         if next(model.parameters()).is_cuda:
             padded_waveforms = padded_waveforms.cuda()
             wave_lengths = wave_lengths.cuda()

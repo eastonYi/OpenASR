@@ -111,6 +111,7 @@ class Embed_Decoder(torch.nn.Module):
         encoder = nn.Embedding(en_config['vocab_size'], en_config['d_model'])
         decoder = TransformerDecoder(de_config)
         model = cls(encoder, decoder)
+        model.encoder.config = en_config
 
         return model
 
