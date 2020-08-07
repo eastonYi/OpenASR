@@ -1,17 +1,4 @@
 """
-Copyright 2020 Ye Bai by1993@qq.com
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 """
 import os
 import time
@@ -165,17 +152,17 @@ class CE_Solver(Solver):
 
             if cross_valid:
                 with torch.no_grad():
-                    ce_loss = self.model(padded_waveforms.to(self.device),
-                            wave_lengths.long().to(self.device),
-                            target_input.long().to(self.device),
-                            target.long().to(self.device),
-                            paddings.long().to(self.device))
+                    ce_loss = self.model(padded_waveforms,
+                            wave_lengths.long(),
+                            target_input.long(),
+                            target.long(),
+                            paddings.long())
             else:
-                ce_loss = self.model(padded_waveforms.to(self.device),
-                        wave_lengths.long().to(self.device),
-                        target_input.long().to(self.device),
-                        target.long().to(self.device),
-                        paddings.long().to(self.device),
+                ce_loss = self.model(padded_waveforms,
+                        wave_lengths.long(),
+                        target_input.long(),
+                        target.long(),
+                        paddings.long(),
                         label_smooth=self.label_smooth)
 
             n_token = torch.sum(1-paddings).float()
@@ -286,17 +273,17 @@ class CTC_CE_Solver(Solver):
 
             if cross_valid:
                 with torch.no_grad():
-                    ctc_loss, ce_loss = self.model(padded_waveforms.to(self.device),
-                            wave_lengths.long().to(self.device),
-                            ids.long().to(self.device),
-                            labels.long().to(self.device),
-                            paddings.long().to(self.device))
+                    ctc_loss, ce_loss = self.model(padded_waveforms,
+                            wave_lengths.long(),
+                            ids.long(),
+                            labels.long(),
+                            paddings.long())
             else:
-                ctc_loss, ce_loss = self.model(padded_waveforms.to(self.device),
-                        wave_lengths.long().to(self.device),
-                        ids.long().to(self.device),
-                        labels.long().to(self.device),
-                        paddings.long().to(self.device),
+                ctc_loss, ce_loss = self.model(padded_waveforms,
+                        wave_lengths.long(),
+                        ids.long(),
+                        labels.long(),
+                        paddings.long(),
                         label_smooth=self.label_smooth)
 
             n_token = torch.sum(1-paddings).float()
@@ -413,17 +400,17 @@ class CIF_Solver(Solver):
 
             if cross_valid:
                 with torch.no_grad():
-                    ctc_loss, qua_loss, ce_loss = self.model(padded_waveforms.to(self.device),
-                            wave_lengths.long().to(self.device),
-                            target_input.long().to(self.device),
-                            target.long().to(self.device),
-                            paddings.long().to(self.device))
+                    ctc_loss, qua_loss, ce_loss = self.model(padded_waveforms,
+                            wave_lengths.long(),
+                            target_input.long(),
+                            target.long(),
+                            paddings.long())
             else:
-                ctc_loss, qua_loss, ce_loss = self.model(padded_waveforms.to(self.device),
-                        wave_lengths.long().to(self.device),
-                        target_input.long().to(self.device),
-                        target.long().to(self.device),
-                        paddings.long().to(self.device),
+                ctc_loss, qua_loss, ce_loss = self.model(padded_waveforms,
+                        wave_lengths.long(),
+                        target_input.long(),
+                        target.long(),
+                        paddings.long(),
                         label_smooth=self.label_smooth)
 
             n_token = torch.sum(1-paddings).float()
@@ -470,7 +457,7 @@ class CIF_Solver(Solver):
 
 class Phone2Char_Solver(Solver):
 
-    def iter_one_epoch(self, cross_valid=False):
+    def iter_one_epoch(self, cross_valid='loss'):
         if cross_valid:
             loader = self.cv_loader
             self.model.eval()
@@ -489,23 +476,22 @@ class Phone2Char_Solver(Solver):
         tot_iter_num = len(loader)
         for niter, data in enumerate(loader):
             niter += 1
-            utts, xs_in, len_xs, target_in, target, paddings = data
-            import pdb; pdb.set_trace()
+            utts, xs_in, len_xs, target_in, target, paddings = (i.to(self.device) for i in data)
 
             if cross_valid:
                 with torch.no_grad():
-                    ce_loss = self.model(xs_in.to(self.device),
-                            len_xs.long().to(self.device),
-                            target_in.long().to(self.device),
-                            target.long().to(self.device),
-                            paddings.long().to(self.device))
+                    ce_loss = self.model(xs_in, len_xs, target_in, target, paddings)
+            # elif cross_valid == 'performance':
+            #     self.model.eval()
+            #     with torch.no_grad():
+            #         encoded, len_encoded = self.model.get_encoded(xs_in, len_xs)
+            #         pred_ids, len_decodeds, scores = self.model.batch_beam_decode(
+            #             encoded, len_encoded, beam_size=self.nbest, max_decode_len=self.maxlen)
+            #
+            #     self.model.train()
             else:
-                ce_loss = self.model(xs_in.to(self.device),
-                        len_xs.long().to(self.device),
-                        target_in.long().to(self.device),
-                        target.long().to(self.device),
-                        paddings.long().to(self.device),
-                        label_smooth=self.label_smooth)
+                ce_loss = self.model(xs_in, len_xs, target_in, target, paddings,
+                                     label_smooth=self.label_smooth)
 
             n_token = torch.sum(1-paddings).float()
             tot_token += n_token
@@ -541,3 +527,39 @@ class Phone2Char_Solver(Solver):
         torch.cuda.empty_cache()
         time.sleep(2)
         return (tot_loss/tot_token).item()
+
+    def train(self):
+        timer = utils.Timer()
+        self.best_cvloss = 9e20
+        if self.cv_loss:
+            self.best_cvloss = min(self.cv_loss)
+
+        while self.epoch < self.num_epoch:
+            timer.tic()
+            self.epoch += 1
+            logging.info("Training")
+            tr_loss = self.iter_one_epoch()
+            tr_msg = ("tr loss: {:.4f}").format(tr_loss)
+            msg = "\n" + "-"*85 + "\n"
+            msg += "Epoch {} Training Summary:\n{}\n".format(self.epoch, tr_msg)
+            msg += "-"*85
+            logging.info(msg)
+            self.save(os.path.join(self.exp_dir, "ep-{:04d}.pt".format(self.epoch)))
+            self.save(os.path.join(self.exp_dir, "last.pt"))
+            logging.info("Validation")
+            cv_loss = self.iter_one_epoch(cross_valid=True)
+
+            if self.best_cvloss > cv_loss:
+                self.best_cvloss = cv_loss
+            train_time = timer.toc()
+            cv_msg = ("cv loss: {:.4f} | best cv loss {:.4f}").format(cv_loss, self.best_cvloss)
+            msg = "\n" + "-"*85 + "\n"
+            msg += "Epoch {} Validation Summary:\n{}\n".format(self.epoch, cv_msg)
+            msg += "Time cost: {:.4f} min".format(train_time/60.)
+            msg += "\n" + "-"*85 + '\n'
+            logging.info(msg)
+            self.tr_loss.append(tr_loss)
+            self.cv_loss.append(cv_loss)
+
+            if self.num_last_ckpt_keep:
+                utils.cleanup_ckpt(self.exp_dir, self.num_last_ckpt_keep)

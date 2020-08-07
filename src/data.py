@@ -30,7 +30,8 @@ SOS_SYM = "<sos>"
 EOS_SYM = "<eos>"
 UNK_SYM = "<unk>"
 BLK_SYM = '<blk>'
-SPECIAL_SYM_SET = {SOS_SYM, EOS_SYM, UNK_SYM, BLK_SYM}
+SPECIAL_SYM_SET = {SOS_SYM, EOS_SYM, UNK_SYM, BLK_SYM,
+                   '[VOCALIZED-NOISE]', '[NOISE]', '[LAUGHTER]'}
 
 
 class CharTokenizer(object):

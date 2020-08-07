@@ -3,7 +3,7 @@ data:
   trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/train.json
   devset: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/dev.json
   vocab_phone: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/callhome.IPA
-  vocab_char: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/callhome.IPA
+  vocab_char: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/vocab.char
   maxlen: 999
   fetchworker_num: 4
 model:
@@ -27,7 +27,7 @@ training:
     batch_size: 80
     multi_gpu: False
     exp_dir: exp/pinyin2char
-    print_inteval: 50
+    print_inteval: 10
     num_epoch: 80
     accumulate_grad_batch: 1
     init_lr: 0.1
