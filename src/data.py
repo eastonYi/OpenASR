@@ -346,10 +346,33 @@ class Phone_Char_Collate(object):
         return utts, (xs_in, len_xs, target_in, target_out, paddings)
 
 
+class Feat_Phone_Char_Collate(Phone_Char_Collate):
+    def __init__(self, tokenizer_phone, tokenizer_char, add_eos=False):
+        self.tokenizer_phone = tokenizer_phone
+        self.tokenizer_char = tokenizer_char
+        self.add_eos = add_eos
+
+    def __call__(self, batch):
+        utts = [d["uttid"] for d in batch]
+
+        paths = [d["feat"] for d in batch]
+        feats, len_feat = load_feat_batch(paths)
+
+        phones = [torch.tensor(self.tokenizer_phone.encode(d["phones"])).long() for d in batch]
+        phones, len_phone = pad_list(phones, pad_value=0, return_length=True)
+
+        tokens = [self.tokenizer_char.encode(d["tokens"]) for d in batch]
+        target_in, target_out, paddings = gen_casual_targets(tokens, 999,
+                self.tokenizer_char.to_id(SOS_SYM), self.tokenizer_char.to_id(EOS_SYM), self.add_eos)
+
+        return utts, (feats, len_feat, phones, len_phone, target_in, target_out, paddings)
+
+
 def kaldi_wav_collate(batch):
     utts = [d[0] for d in batch]
     paths = [d[1] for d in batch]
     padded_data, lengths = load_wave_batch(paths)
+
     return utts, padded_data, lengths
 
 

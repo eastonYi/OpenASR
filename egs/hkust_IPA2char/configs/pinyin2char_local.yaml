@@ -31,12 +31,12 @@ training:
     print_inteval: 10
     num_epoch: 80
     accumulate_grad_batch: 1
-    init_lr: 0.1
+    init_lr: 1.0
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
     num_last_ckpt_keep: 1
     lr_scheduler:
         type: warmup_transformer
-        warmup_step: 10000
+        warmup_step: 500
         d_model: 512

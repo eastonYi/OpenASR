@@ -191,7 +191,7 @@ class CE_Solver(Solver):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('Epoch {} | Step {} | Iter {} batch {} \nall_loss/token: {:.3f} ce_loss/token: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
+                print('Epoch {} | Step {} | Iter {} batch {} \ncur_all_loss: {:.3f} ce_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
                     self.epoch, self.step, niter, list(padded_waveforms.size()),
                     loss, tot_loss / tot_token, list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
                 ), flush=True)
@@ -314,7 +314,7 @@ class CTC_CE_Solver(Solver):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('Epoch {} | Step {} | Iter {} batch {} \nall_loss/token: {:.3f} ce_loss/token: {:.3f} ctc_loss/sent: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
+                print('Epoch {} | Step {} | Iter {} batch {} \ncur_all_loss: {:.3f} ce_loss: {:.3f} ctc_loss/sent: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
                     self.epoch, self.step, niter, list(padded_waveforms.size()),
                     loss, tot_loss / tot_token, tot_ctc_loss / tot_sequence,
                     list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
@@ -444,7 +444,7 @@ class CIF_Solver(Solver):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('Epoch {} | Step {} | Iter {} batch {} \nall_loss/token: {:.3f} ce_loss/token: {:.3f} ctc_loss/sent: {:.3f} qua_loss/sent: {:.3f} lr: {:.3e} sec/sent: {:.3f}s\n'.format(
+                print('Epoch {} | Step {} | Iter {} batch {} \ncur_all_loss: {:.3f} ce_loss: {:.3f} ctc_loss: {:.3f} qua_loss: {:.3f} lr: {:.3e} sec/sent: {:.3f}s\n'.format(
                     self.epoch, self.step, niter, list(padded_waveforms.size()),
                     loss, tot_loss/tot_token, tot_ctc_loss/tot_sequence, tot_qua_loss/tot_sequence,
                     list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
@@ -519,7 +519,7 @@ class Phone2Char_Solver(Solver):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('Epoch {} | Step {} | Iter {} batch {} \nall_loss/token: {:.3f} ce_loss/token: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
+                print('Epoch {} | Step {} | Iter {} batch {} \ncur_all_loss: {:.3f} ce_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
                     self.epoch, self.step, niter, list(xs_in.size()),
                     loss, tot_loss / tot_token, list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
                 ), flush=True)

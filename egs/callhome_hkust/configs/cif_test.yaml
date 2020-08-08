@@ -1,14 +1,15 @@
 # continue_training:
 data:
-  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train/
-  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/dev/ja.json
-  vocab_path: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/callhome.IPA
+  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train
+  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/dev/dev.json
+  vocab_phone: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/callhome.IPA
+  vocab_char: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/vocab.char
   maxlen: 200
   fetchworker_num: 1
 model:
-  type: CIF
-  add_eos: False
-  add_blk: True
+  type: CIF_MIX
+  add_eos: True
+  add_blk: False
   signal:
     feature_type: offline
     spec_aug:
@@ -38,10 +39,10 @@ model:
     vocab_size: -1 # derived by tokenizer
     encoder_dim: 512
 training:
-    label_type: phones
+    label_type: feat_phone_char
     batch_frames: 1000
     multi_gpu: False
-    exp_dir: exp/cif
+    exp_dir: exp/cif_mix
     print_inteval: 10
     num_epoch: 80
     accumulate_grad_batch: 2
@@ -53,6 +54,6 @@ training:
     lambda_ctc: 1.0
     num_last_ckpt_keep: 1
     lr_scheduler:
-        type: "warmup_transformer"
+        type: warmup_transformer
         warmup_step: 10000
         d_model: 512

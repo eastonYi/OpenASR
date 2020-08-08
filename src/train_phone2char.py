@@ -55,24 +55,45 @@ if __name__ == "__main__":
     modelconfig = config["model"]
 
     ngpu = 1
+    if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
+        ngpu = torch.cuda.device_count()
 
     tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=False)
     tokenizer_char = data.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
     modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
     modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
+
     training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
     valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
-    collate = data.Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
-    tr_loader = torch.utils.data.DataLoader(training_set,
-        collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=2)
-    cv_loader = torch.utils.data.DataLoader(valid_set,
-        collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=1)
 
     if modelconfig['type'] == 'Embed_Decoder':
         from frameworks.Text_Models import Embed_Decoder as Model
         from solvers import Phone2Char_Solver as Solver
 
         model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
+
+        collate = data.Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
+        tr_loader = torch.utils.data.DataLoader(training_set,
+            collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=2)
+        cv_loader = torch.utils.data.DataLoader(valid_set,
+            collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=1)
+
+    elif modelconfig['type'] == 'CIF_MIX':
+        from frameworks.Speech_Models import CIF_MIX as Model
+        from solvers import CIF_MIX_Solver as Solver
+
+        model = Model.create_model(modelconfig["signal"],
+                                   modelconfig["encoder"],
+                                   modelconfig["assigner"],
+                                   modelconfig["decoder"])
+
+        collate = data.Feat_Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
+        trainingsampler = data.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
+        validsampler = data.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
+        tr_loader = torch.utils.data.DataLoader(training_set,
+            collate_fn=collate, batch_sampler=trainingsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
+        cv_loader = torch.utils.data.DataLoader(valid_set,
+            collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
     logging.info("\nModel info:\n{}".format(model))
 
