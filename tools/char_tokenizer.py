@@ -12,9 +12,12 @@ if __name__ == '__main__':
 
     with open(args.text) as f, open(args.output, 'w') as fw:
         for line in f:
-            uttid, trans = line.strip().split(maxsplit=1)
+            try:
+                uttid, trans = line.strip().split(maxsplit=1)
+            except:
+                continue
             tokens = []
-            for token in trans:
+            for token in trans.split():
                 if re.findall('[a-zA-Z]', token):
                     tokens.append(token)
                 else:
