@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 
-from conv_layers import Conv1d, Conv2d
+from blocks.conv_layers import Conv1d, Conv2d
 from utils import sequence_mask
 
 

@@ -464,16 +464,16 @@ class CIF(Conv_CTC_Transformer):
 
 
 class CIF_MIX(CIF):
-    def __init__(self, splayer, encoder, assigner, fc, decoder):
-        super().__init__(splayer, encoder, decoder)
-        self.phone_fc = fc
+    def __init__(self, splayer, encoder, assigner, decoder):
+        super().__init__(splayer, encoder, assigner, decoder)
+        self.phone_fc = nn.Linear(encoder.d_model, decoder.vocab_size, bias=False)
         self._reset_parameters()
 
-    def forward(self, batch_wave, lengths, phone, phone_paddings,
+    def forward(self, batch_wave, lengths, phone, len_phone,
                 target_input, targets=None, target_paddings=None, label_smooth=0., threshold=0.95):
         device = batch_wave.device
-        phone_lengths = torch.sum(1-phone_paddings, dim=-1).long()
         target_lengths = torch.sum(1-target_paddings, dim=-1).long()
+        phone_paddings = phone.eq(0).float()
 
         encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
         encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
@@ -485,17 +485,17 @@ class CIF_MIX(CIF):
         # sum
         _num = alphas.sum(-1)
         # scaling
-        num = phone_lengths.float()
+        num = len_phone.float()
         num_noise = num + 0.9 * torch.rand(alphas.size(0)).to(device) - 0.45
         alphas *= (num_noise / _num)[:, None].repeat(1, alphas.size(1))
 
         cif_outputs = self.cif(encoder_outputs, alphas, threshold=threshold)
-        cif_outputs_lengths = phone_lengths
+        cif_outputs_lengths = len_phone
 
         logits_IPA = self.phone_fc(cif_outputs)
         logits = self.decoder(cif_outputs, cif_outputs_lengths, target_input, target_lengths)
 
-        ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, phone, phone_lengths)
+        ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, phone, len_phone)
         qua_loss = cal_qua_loss(_num, num)
         ce_phone_loss = cal_ce_loss(logits_IPA, phone, phone_paddings, label_smooth)
         ce_target_loss = cal_ce_loss(logits, targets, target_paddings, label_smooth)
@@ -568,12 +568,12 @@ class CIF_MIX(CIF):
         from blocks.sp_layers import SPLayer
         from blocks.encoders import TransformerEncoder
         from blocks.attention_assigner import Attention_Assigner
-        from blocks.decoders import CIF_Decoder
+        from blocks.decoders import TransformerDecoder
 
         splayer = SPLayer(sp_config)
         encoder = TransformerEncoder(en_config)
         assigner = Attention_Assigner(as_cofig)
-        decoder = CIF_Decoder(de_config)
+        decoder = TransformerDecoder(de_config)
 
         model = cls(splayer, encoder, assigner, decoder)
 

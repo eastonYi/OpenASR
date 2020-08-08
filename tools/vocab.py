@@ -7,6 +7,7 @@ import logging
 from argparse import ArgumentParser
 from collections import Counter
 from tqdm import tqdm
+import re
 
 
 def make_vocab(fpath, fname):
@@ -25,6 +26,8 @@ def make_vocab(fpath, fname):
             word2cnt.update(Counter(words))
     with open(fname, 'w', encoding='utf-8') as fout:
         for word, cnt in word2cnt.most_common():
+            if re.findall('[0-9a-zA-Z]', word):
+                continue
             fout.write(u"{}\n".format(word))
     logging.info('Vocab path: {}\t size: {}'.format(fname, len(word2cnt)))
 

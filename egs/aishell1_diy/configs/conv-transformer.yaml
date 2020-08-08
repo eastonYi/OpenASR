@@ -50,7 +50,7 @@ training:
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    num_last_ckpt_keep: 10
+    num_last_ckpt_keep: 10z
     lr_scheduler:
         type: warmup_transformer
         warmup_step: 10000

@@ -88,8 +88,8 @@ if __name__ == "__main__":
                                    modelconfig["decoder"])
 
         collate = data.Feat_Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
-        trainingsampler = data.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
-        validsampler = data.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
+        trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
+        validsampler = data.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
         tr_loader = torch.utils.data.DataLoader(training_set,
             collate_fn=collate, batch_sampler=trainingsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
         cv_loader = torch.utils.data.DataLoader(valid_set,

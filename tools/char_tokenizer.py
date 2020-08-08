@@ -14,6 +14,7 @@ if __name__ == '__main__':
         for line in f:
             try:
                 uttid, trans = line.strip().split(maxsplit=1)
+                trans.replace('[', ' [').replace(']', '] ')
             except:
                 continue
             tokens = []

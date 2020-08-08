@@ -156,14 +156,14 @@ class ArkDataset(SpeechDataset):
         if rate_in_out:
             list_to_pop = []
             for i, sample in enumerate(data):
-                len_x = sample['input_length']
-                len_y = sample['output_length']
+                len_x = sample['feat_length']
+                len_y = sample['token_length']
                 if len_x < 1 or len_y < 1 or not (rate_in_out[0] <= (len_x / len_y) <= rate_in_out[1]):
                     list_to_pop.append(i)
             list_to_pop.reverse()
             [data.pop(i) for i in list_to_pop]
 
-        self.data = sorted(data, key=lambda x: float(x["input_length"]))
+        self.data = sorted(data, key=lambda x: float(x["feat_length"]))
         if reverse:
             self.data.reverse()
 
@@ -214,7 +214,7 @@ class FrameBasedSampler(TimeBasedSampler):
         batch_frames = 0
         for idx in range(len(self.dataset)):
             batch.append(idx)
-            batch_frames += self.dataset[idx]["input_length"]
+            batch_frames += self.dataset[idx]["feat_length"]
             if batch_frames >= self.frames and len(batch)%ngpu==0:
                 # To make the numbers of batchs are equal for each GPU.
                 batchs.append(batch)
@@ -354,10 +354,8 @@ class Feat_Phone_Char_Collate(Phone_Char_Collate):
 
     def __call__(self, batch):
         utts = [d["uttid"] for d in batch]
-
         paths = [d["feat"] for d in batch]
         feats, len_feat = load_feat_batch(paths)
-
         phones = [torch.tensor(self.tokenizer_phone.encode(d["phones"])).long() for d in batch]
         phones, len_phone = pad_list(phones, pad_value=0, return_length=True)
 

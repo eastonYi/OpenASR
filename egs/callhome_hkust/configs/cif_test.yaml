@@ -2,8 +2,8 @@
 data:
   trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train
   devset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/dev/dev.json
-  vocab_phone: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/callhome.IPA
-  vocab_char: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust_IPA2char/data/vocab.char
+  vocab_phone: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/callhome.IPA
+  vocab_char: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/vocab_ja.char
   maxlen: 200
   fetchworker_num: 1
 model:
@@ -24,7 +24,7 @@ model:
       layer_num: 1
     input_dim: 80
     d_model: 512
-    nhead: 2
+    nhead: 4
     dim_feedforward: 2048
     activation: "glu"
     num_layers: 1
@@ -35,9 +35,15 @@ model:
     w_context: 3
     dropout: 0.1
   decoder:
-    type: FC
+    type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer
+    d_model: 512
+    nhead: 4
+    num_layers: 1
     encoder_dim: 512
+    dim_feedforward: 2048
+    activation: "glu"
+    dropout_rate: 0.1
 training:
     label_type: feat_phone_char
     batch_frames: 1000
