@@ -39,14 +39,14 @@ model:
     vocab_size: -1 # derived by tokenizer
     d_model: 512
     nhead: 8
-    num_layers: 4
+    num_layers: 6
     encoder_dim: 512
     dim_feedforward: 2048
     activation: "glu"
     dropout_rate: 0.1
 training:
     label_type: feat_phone_char
-    batch_frames: 10000
+    batch_frames: 16000
     multi_gpu: False
     exp_dir: exp/cif_mix
     print_inteval: 50

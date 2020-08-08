@@ -58,7 +58,7 @@ if __name__ == "__main__":
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
 
-    tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=False)
+    tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
     tokenizer_char = data.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
     modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
     modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
