@@ -123,8 +123,10 @@ if __name__ == "__main__":
 
         with torch.no_grad():
             encoded, len_encoded = model.get_encoded(padded_waveforms, wave_lengths)
-            pred_ids, len_decodeds, scores = model.batch_beam_decode(encoded, len_encoded,
-                sosid=1, eosid=2, beam_size=args.nbest, max_decode_len=args.maxlen)
+            pred_ids, len_decodeds, scores = model.batch_beam_decode(
+                encoded, len_encoded, model.decoder.step_forward,
+                vocab_size=tokenizer.unit_num(),
+                beam_size=args.nbest, max_decode_len=args.maxlen)
         pred_ids = pred_ids.cpu().numpy()
         len_decodeds = len_decodeds.cpu().tolist()
         scores = scores.cpu().numpy()

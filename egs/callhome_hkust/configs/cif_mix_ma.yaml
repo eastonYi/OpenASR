@@ -1,11 +1,11 @@
 # continue_training:
 data:
-  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train
-  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/dev/dev.json
-  vocab_phone: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/callhome.IPA
-  vocab_char: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/vocab_ja.char
+  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train
+  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ma_dev.json
+  vocab_phone: /home/easton/projects/OpenASR/egs/callhome_hkust/data/callhome.IPA
+  vocab_char: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ma.char
   maxlen: 200
-  fetchworker_num: 1
+  fetchworker_num: 4
 model:
   type: CIF_MIX
   add_eos: True
@@ -24,10 +24,10 @@ model:
       layer_num: 1
     input_dim: 80
     d_model: 512
-    nhead: 4
+    nhead: 8
     dim_feedforward: 2048
     activation: "glu"
-    num_layers: 1
+    num_layers: 4
     dropout_rate: 0.1
   assigner:
     d_model: 512
@@ -38,27 +38,27 @@ model:
     type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer
     d_model: 512
-    nhead: 4
-    num_layers: 1
+    nhead: 8
+    num_layers: 6
     encoder_dim: 512
     dim_feedforward: 2048
     activation: "glu"
     dropout_rate: 0.1
 training:
     label_type: feat_phone_char
-    batch_frames: 1000
+    batch_frames: 14000
     multi_gpu: False
-    exp_dir: exp/cif_mix_ja
-    print_inteval: 10
+    exp_dir: exp/cif_mix_ma
+    print_inteval: 50
     num_epoch: 80
-    accumulate_grad_batch: 2
-    init_lr: 1.0
+    accumulate_grad_batch: 8
+    init_lr: 0.1
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
     lambda_qua: 0.1
     lambda_ctc: 1.0
-    num_last_ckpt_keep: 1
+    num_last_ckpt_keep: 10
     lr_scheduler:
         type: warmup_transformer
         warmup_step: 10000

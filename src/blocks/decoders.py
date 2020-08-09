@@ -54,7 +54,7 @@ class TransformerDecoder(nn.Module):
         nn.init.xavier_normal_(self.output_affine.weight)
         self.emb.weight = self.output_affine.weight # tying weight
 
-    def forward(self, encoder_outputs, encoder_output_lengths, decoder_inputs, decoder_input_lengths, return_atten=False):
+    def forward(self, encoder_outputs, encoder_output_lengths, decoder_inputs, decoder_input_lengths):
 
         B, T_e, D_e = encoder_outputs.shape
         encoder_outputs = encoder_outputs.permute(1, 0, 2) # [S, B, D_e]
@@ -79,6 +79,9 @@ class TransformerDecoder(nn.Module):
         outputs = self.output_affine(outputs)
 
         return outputs
+
+    def step_forward(self, encoder_outputs, encoder_output_lengths, decoder_inputs, decoder_input_lengths):
+        return self.forward(encoder_outputs, encoder_output_lengths, decoder_inputs, decoder_input_lengths)[:, -1]
 
 
 class CIF_Decoder(nn.Module):
