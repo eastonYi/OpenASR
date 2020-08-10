@@ -678,7 +678,7 @@ class CIF_MIX_Solver(CIF_Solver):
                 (i.to(self.device) for i in data_acoustic)
             feats, len_feat, phones, len_phone, target_in, target_out, paddings = \
                 (i.to(self.device) for i in data)
-            import pdb; pdb.set_trace()
+
             # general acoustic loss
             n_phone_acoustic = len_phone_acoustic.sum()
             tot_phone_acoustic += n_phone_acoustic
