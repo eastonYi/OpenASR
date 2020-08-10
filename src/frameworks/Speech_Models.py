@@ -473,9 +473,8 @@ class CIF_MIX(CIF):
         self._reset_parameters()
 
     def forward(self, batch_wave, lengths, phone, len_phone,
-                target_input, targets=None, target_paddings=None, label_smooth=0., threshold=0.95):
+                target_input=None, targets=None, target_paddings=None, label_smooth=0., threshold=0.95):
         device = batch_wave.device
-        target_lengths = torch.sum(1-target_paddings, dim=-1).long()
         phone_paddings = phone.eq(0).float()
 
         encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
@@ -496,14 +495,23 @@ class CIF_MIX(CIF):
         cif_outputs_lengths = len_phone
 
         logits_IPA = self.phone_fc(cif_outputs)
-        logits = self.decoder(cif_outputs, cif_outputs_lengths, target_input, target_lengths)
 
-        ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, phone, len_phone)
-        qua_loss = cal_qua_loss(_num, num)
-        ce_phone_loss = cal_ce_loss(logits_IPA, phone, phone_paddings, label_smooth)
-        ce_target_loss = cal_ce_loss(logits, targets, target_paddings, label_smooth)
+        if target_input is not None:
+            target_lengths = torch.sum(1-target_paddings, dim=-1).long()
+            logits = self.decoder(cif_outputs, cif_outputs_lengths, target_input, target_lengths)
 
-        return ctc_loss, qua_loss, ce_phone_loss, ce_target_loss
+            ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, phone, len_phone)
+            qua_loss = cal_qua_loss(_num, num)
+            ce_phone_loss = cal_ce_loss(logits_IPA, phone, phone_paddings, label_smooth)
+            ce_target_loss = cal_ce_loss(logits, targets, target_paddings, label_smooth)
+
+            return ctc_loss, qua_loss, ce_phone_loss, ce_target_loss
+        else:
+            ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, phone, len_phone)
+            qua_loss = cal_qua_loss(_num, num)
+            ce_phone_loss = cal_ce_loss(logits_IPA, phone, phone_paddings, label_smooth)
+
+            return ctc_loss, qua_loss, ce_phone_loss
 
     @staticmethod
     def batch_beam_decode(encoded, len_encoded, step_forward_fn, vocab_size, beam_size, max_decode_len=100):

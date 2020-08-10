@@ -64,7 +64,6 @@ if __name__ == "__main__":
     tokenizer_phone = data.CharTokenizer(args.vocab_phone, add_blk=True)
     tokenizer_char = data.CharTokenizer(args.vocab_char, add_blk=args.add_blk)
     test_set = data.ArkDataset(args.json_file, rate_in_out=None)
-    logging.info("Start feedforward...")
 
     if args.model_type.lower() == 'embed_decoder':
         from frameworks.Text_Models import Embed_Decoder as Model

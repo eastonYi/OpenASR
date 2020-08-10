@@ -63,6 +63,7 @@ if __name__ == "__main__":
     modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
     modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
 
+    acoustic_set = data.ArkDataset(dataconfig["acoustic"], rate_in_out=None)
     training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
     valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
 
@@ -70,30 +71,44 @@ if __name__ == "__main__":
         from frameworks.Text_Models import Embed_Decoder as Model
         from solvers import Phone2Char_Solver as Solver
 
-        model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
-
         collate = data.Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
         tr_loader = torch.utils.data.DataLoader(training_set,
             collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=2)
         cv_loader = torch.utils.data.DataLoader(valid_set,
             collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=1)
 
+        model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
+        solver = Solver(model, trainingconfig, tr_loader, cv_loader)
+
     elif modelconfig['type'] == 'CIF_MIX':
         from frameworks.Speech_Models import CIF_MIX as Model
         from solvers import CIF_MIX_Solver as Solver
+
+        collate_acoustic = data.Feat_Phone_Collate(tokenizer_phone)
+        sampler_acoustic = data.FrameBasedSampler(
+            acoustic_set, trainingconfig["batch_acoustic_frames"]*ngpu, ngpu, shuffle=True)
+        batchiter_acoustic = torch.utils.data.DataLoader(
+            acoustic_set, collate_fn=collate_acoustic, batch_sampler=sampler_acoustic,
+            shuffle=False, num_workers=dataconfig["fetchworker_num"])
+
+        collate = data.Feat_Phone_Char_Collate(
+            tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
+        sampler_training = data.FrameBasedSampler(
+            training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
+        sampler_valid = data.FrameBasedSampler(
+            valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
+        batchiter_train = torch.utils.data.DataLoader(training_set,
+            collate_fn=collate, batch_sampler=sampler_training, shuffle=False,
+            num_workers=dataconfig["fetchworker_num"])
+        batchiter_dev = torch.utils.data.DataLoader(valid_set,
+            collate_fn=collate, batch_sampler=sampler_valid, shuffle=False,
+            num_workers=dataconfig["fetchworker_num"])
 
         model = Model.create_model(modelconfig["signal"],
                                    modelconfig["encoder"],
                                    modelconfig["assigner"],
                                    modelconfig["decoder"])
-
-        collate = data.Feat_Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
-        trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
-        validsampler = data.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
-        tr_loader = torch.utils.data.DataLoader(training_set,
-            collate_fn=collate, batch_sampler=trainingsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
-        cv_loader = torch.utils.data.DataLoader(valid_set,
-            collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
+        solver = Solver(model, trainingconfig, batchiter_acoustic, batchiter_train, batchiter_dev)
 
     logging.info("\nModel info:\n{}".format(model))
 
@@ -104,8 +119,6 @@ if __name__ == "__main__":
 
     if torch.cuda.is_available():
         model = model.cuda()
-
-    solver = Solver(model, trainingconfig, tr_loader, cv_loader)
 
     if args.continue_training:
         logging.info("Restore solver states...")

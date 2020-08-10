@@ -1,6 +1,7 @@
 # continue_training:
 data:
-  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train
+  acoustic: /data3/easton/data/CALLHOME_Multilingual/jsons/train
+  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train/ja_train.json
   devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
   vocab_phone: /home/easton/projects/OpenASR/egs/callhome_hkust/data/callhome.IPA
   vocab_char: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ja.char
@@ -46,6 +47,7 @@ model:
     dropout_rate: 0.1
 training:
     label_type: feat_phone_char
+    batch_acoustic_frames: 10000
     batch_frames: 14000
     multi_gpu: False
     exp_dir: exp/cif_mix

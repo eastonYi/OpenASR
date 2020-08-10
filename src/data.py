@@ -80,7 +80,7 @@ def gen_casual_targets(idslist, maxlen, sos_id, eos_id, add_eos):
         if len(ids) > maxlen:
             logging.warn("ids length {} vs. maxlen {}, cut it.".format(len(ids), maxlen))
         l = min(len(ids), maxlen)
-        list_tokens.append(torch.tensor(ids).long()[:l])
+        list_tokens.append(torch.tensor(np.array(ids)).long()[:l])
         list_paddings.append(torch.zeros(l).long())
 
     padded_rawids = pad_list(list_tokens, eos_id)
@@ -96,7 +96,7 @@ def gen_casual_targets(idslist, maxlen, sos_id, eos_id, add_eos):
 def pad_list(xs, pad_value, max_len=None, return_length=False):
     # From: espnet/src/nets/e2e_asr_th.py: pad_list()
     n_batch = len(xs)
-    lengths = torch.tensor([x.size(0) for x in xs]).long()
+    lengths = torch.tensor(np.array([x.size(0) for x in xs])).long()
     max_len = lengths.max() if not max_len else max_len
     pad = xs[0].new(n_batch, max_len, * xs[0].size()[1:]).fill_(pad_value)
     for i in range(n_batch):
@@ -241,7 +241,7 @@ def load_wave_batch(paths):
     padded_waveforms = torch.zeros(len(lengths), max_length)
     for i in range(len(lengths)):
         padded_waveforms[i, :lengths[i]] += waveforms[i]
-    return padded_waveforms, torch.tensor(lengths).long()
+    return padded_waveforms, torch.tensor(np.array(lengths)).long()
 
 
 def load_feat_batch(paths):
@@ -257,7 +257,7 @@ def load_feat_batch(paths):
     padded_features = torch.zeros(len(lengths), max_length, dim)
     for i in range(len(lengths)):
         padded_features[i, :lengths[i], :] += features[i]
-    return padded_features, torch.tensor(lengths).long()
+    return padded_features, torch.tensor(np.array(lengths)).long()
 
 
 class TextCollate(object):
@@ -299,7 +299,7 @@ class WaveCollate(object):
 
 
 class FeatureCollate(object):
-    def __init__(self, tokenizer, maxlen, add_eos=False, label_type='tokens'):
+    def __init__(self, tokenizer, maxlen=999, add_eos=False, label_type='tokens'):
         self.tokenizer = tokenizer
         self.maxlen = maxlen
         self.add_eos = add_eos
@@ -319,7 +319,7 @@ class FeatureCollate(object):
         padded_features, feature_lengths = load_feat_batch(paths)
         logging.debug("Feature Loading Time: {}s".format(timer.toc()))
         timer.tic()
-        rawids_list = [self.tokenizer.encode(t) for t in trans]
+        rawids_list = [np.array(self.tokenizer.encode(t)) for t in trans]
         ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
                 self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.add_eos)
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
@@ -336,14 +336,28 @@ class Phone_Char_Collate(object):
     def __call__(self, batch):
         utts = [d["uttid"] for d in batch]
 
-        phones = [torch.tensor(self.tokenizer_phone.encode(d["phones"])).long() for d in batch]
+        phones = [torch.tensor(np.array(self.tokenizer_phone.encode(d["phones"]))).long() for d in batch]
         xs_in, len_xs = pad_list(phones, pad_value=0, return_length=True)
 
-        tokens = [self.tokenizer_char.encode(d["tokens"]) for d in batch]
+        tokens = [np.array(self.tokenizer_char.encode(d["tokens"])) for d in batch]
         target_in, target_out, paddings = gen_casual_targets(tokens, 999,
                 self.tokenizer_char.to_id(SOS_SYM), self.tokenizer_char.to_id(EOS_SYM), self.add_eos)
 
         return utts, (xs_in, len_xs, target_in, target_out, paddings)
+
+
+class Feat_Phone_Collate(Phone_Char_Collate):
+    def __init__(self, tokenizer_phone):
+        self.tokenizer_phone = tokenizer_phone
+
+    def __call__(self, batch):
+        utts = [d["uttid"] for d in batch]
+        paths = [d["feat"] for d in batch]
+        feats, len_feat = load_feat_batch(paths)
+        phones = [torch.tensor(np.array(self.tokenizer_phone.encode(d["phones"]))).long() for d in batch]
+        phones, len_phone = pad_list(phones, pad_value=0, return_length=True)
+
+        return utts, (feats, len_feat, phones, len_phone)
 
 
 class Feat_Phone_Char_Collate(Phone_Char_Collate):
@@ -356,10 +370,10 @@ class Feat_Phone_Char_Collate(Phone_Char_Collate):
         utts = [d["uttid"] for d in batch]
         paths = [d["feat"] for d in batch]
         feats, len_feat = load_feat_batch(paths)
-        phones = [torch.tensor(self.tokenizer_phone.encode(d["phones"])).long() for d in batch]
+        phones = [torch.tensor(np.array(self.tokenizer_phone.encode(d["phones"]))).long() for d in batch]
         phones, len_phone = pad_list(phones, pad_value=0, return_length=True)
 
-        tokens = [self.tokenizer_char.encode(d["tokens"]) for d in batch]
+        tokens = [np.array(self.tokenizer_char.encode(d["tokens"])) for d in batch]
         target_in, target_out, paddings = gen_casual_targets(tokens, 999,
                 self.tokenizer_char.to_id(SOS_SYM), self.tokenizer_char.to_id(EOS_SYM), self.add_eos)
 

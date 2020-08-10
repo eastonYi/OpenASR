@@ -1,6 +1,7 @@
 # continue_training:
 data:
-  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train
+  acoustic: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train
+  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train/ja.json
   devset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/dev/dev.json
   vocab_phone: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/callhome.IPA
   vocab_char: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/vocab_ja.char
@@ -47,6 +48,7 @@ model:
 training:
     label_type: feat_phone_char
     batch_frames: 1000
+    batch_acoustic_frames: 1000
     multi_gpu: False
     exp_dir: exp/cif_mix_ja
     print_inteval: 10

@@ -38,6 +38,12 @@ class AttrDict(dict):
         return res
 
 
+def cycle(iterable):
+    while True:
+        for x in iterable:
+            yield x
+
+
 def load_vocab(path, vocab_size=None):
     with open(path, encoding='utf8') as f:
         vocab = [line.strip().split()[0] for line in f]
