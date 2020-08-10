@@ -731,13 +731,14 @@ class CIF_MIX_Solver(CIF_Solver):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('''Epoch {} | Step {} | Iter {} batch {}
-                         acoustic cur_all_loss: {:.3f} ce_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}
-                         target   cur_all_loss: {:.3f} ce_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}
+                print('''Epoch {} | Step {} | Iter {} batch {} lr: {:.3e} sent/sec: {:.3f}
+     acoustic cur_all_loss: {:.3f} loss_ce_phone: {:.3f} loss_ctc {:.3f} loss_qua: {:.3f}
+     target   cur_all_loss: {:.3f} loss_ce_phone: {:.3f} loss_ctc: {:.3f} loss_qua: {:.3f} loss_ce_char: {:.3f}
                       '''.format(
                     self.epoch, self.step, niter, list(feats.size()),
-                    loss_acoustic, loss_ce_phone, loss_ctc_acoustic, loss_qua_acoustic,
-                    loss, tot_loss / tot_token, list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
+                    list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc(),
+                    loss_acoustic, loss_ce_phone_acoustic, loss_ctc_acoustic, loss_qua_acoustic,
+                    loss, loss_ce_phone, loss_ctc, loss_qua, loss_ce_target,
                 ), flush=True)
 
         torch.cuda.empty_cache()
