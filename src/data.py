@@ -68,7 +68,7 @@ class CharTokenizer(object):
         return len(self.unit2id)
 
 
-def gen_casual_targets(idslist, maxlen, sos_id, eos_id, add_eos):
+def gen_casual_targets(idslist, maxlen, add_eos, sos_id=1, eos_id=2,):
     if add_eos:
         ids_with_sym_list = [[sos_id]+ids+[eos_id] for ids in idslist]
     else:
@@ -269,8 +269,7 @@ class TextCollate(object):
         timer = utils.Timer()
         timer.tic()
         rawids_list = [self.tokenizer.encode(t) for t in batch]
-        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
-                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM))
+        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen)
         logging.debug("Text Processing Time: {}s".format(timer.toc()))
         return ids, labels, paddings
 
@@ -291,8 +290,7 @@ class WaveCollate(object):
         logging.debug("Wave Loading Time: {}s".format(timer.toc()))
         timer.tic()
         rawids_list = [self.tokenizer.encode(t) for t in trans]
-        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
-                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.add_eos)
+        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen, self.add_eos)
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
 
         return utts, (padded_waveforms, wave_lengths, ids, labels, paddings)
@@ -320,8 +318,7 @@ class FeatureCollate(object):
         logging.debug("Feature Loading Time: {}s".format(timer.toc()))
         timer.tic()
         rawids_list = [np.array(self.tokenizer.encode(t)) for t in trans]
-        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen,
-                self.tokenizer.to_id(SOS_SYM), self.tokenizer.to_id(EOS_SYM), self.add_eos)
+        ids, labels, paddings = gen_casual_targets(rawids_list, self.maxlen, self.add_eos)
         logging.debug("Transcription Processing Time: {}s".format(timer.toc()))
 
         return utts, (padded_features, feature_lengths, ids, labels, paddings)
@@ -340,8 +337,7 @@ class Phone_Char_Collate(object):
         xs_in, len_xs = pad_list(phones, pad_value=0, return_length=True)
 
         tokens = [np.array(self.tokenizer_char.encode(d["tokens"])) for d in batch]
-        target_in, target_out, paddings = gen_casual_targets(tokens, 999,
-                self.tokenizer_char.to_id(SOS_SYM), self.tokenizer_char.to_id(EOS_SYM), self.add_eos)
+        target_in, target_out, paddings = gen_casual_targets(tokens, 999, self.add_eos)
 
         return utts, (xs_in, len_xs, target_in, target_out, paddings)
 
@@ -374,8 +370,7 @@ class Feat_Phone_Char_Collate(Phone_Char_Collate):
         phones, len_phone = pad_list(phones, pad_value=0, return_length=True)
 
         tokens = [np.array(self.tokenizer_char.encode(d["tokens"])) for d in batch]
-        target_in, target_out, paddings = gen_casual_targets(tokens, 999,
-                self.tokenizer_char.to_id(SOS_SYM), self.tokenizer_char.to_id(EOS_SYM), self.add_eos)
+        target_in, target_out, paddings = gen_casual_targets(tokens, 999, self.add_eos)
 
         return utts, (feats, len_feat, phones, len_phone, target_in, target_out, paddings)
 

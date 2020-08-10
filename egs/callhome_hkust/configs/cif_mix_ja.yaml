@@ -7,7 +7,7 @@ data:
   vocab_char: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ja.char
   maxlen: 200
   fetchworker_num: 4
-model:
+model:  
   type: CIF_MIX
   add_eos: True
   add_blk: False
@@ -50,7 +50,7 @@ training:
     batch_acoustic_frames: 10000
     batch_frames: 14000
     multi_gpu: False
-    exp_dir: exp/cif_mix
+    exp_dir: exp/cif_mix_ja
     print_inteval: 50
     num_epoch: 80
     accumulate_grad_batch: 8
