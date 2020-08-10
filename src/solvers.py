@@ -690,7 +690,7 @@ class CIF_MIX_Solver(CIF_Solver):
                            label_smooth=self.label_smooth)
 
             loss_ce_phone_acoustic = loss_ce_phone_acoustic.sum() / n_phone_acoustic
-            loss_ctc_acoustic = loss_qua_acoustic.sum() / n_sequence_acoustic
+            loss_ctc_acoustic = loss_ctc_acoustic.sum() / n_sequence_acoustic
             loss_qua_acoustic = loss_qua_acoustic.sum() / n_sequence_acoustic
             loss_acoustic = loss_ce_phone_acoustic + \
                    self.lambda_qua * loss_qua_acoustic + \
