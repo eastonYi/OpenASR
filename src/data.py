@@ -248,8 +248,8 @@ def load_feat_batch(paths):
     features = []
     lengths = []
     for path in paths:
-        feature = kio.read_mat(path)
-        feature = torch.from_numpy(feature)
+        feature = np.copy(kio.read_mat(path))
+        feature = torch.tensor(feature)
         features.append(feature)
         lengths.append(feature.shape[0])
     max_length = max(lengths)

@@ -99,7 +99,7 @@ if __name__ == "__main__":
             valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
         batchiter_train = torch.utils.data.DataLoader(training_set,
             collate_fn=collate, batch_sampler=sampler_training, shuffle=False,
-            num_workers=dataconfig["fetchworker_num"])
+            num_workers=1)
         batchiter_dev = torch.utils.data.DataLoader(valid_set,
             collate_fn=collate, batch_sampler=sampler_valid, shuffle=False,
             num_workers=dataconfig["fetchworker_num"])

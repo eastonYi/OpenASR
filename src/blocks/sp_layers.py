@@ -93,10 +93,10 @@ class SPLayer(nn.Module):
                 l = feature_lengths[i]
                 padded_features[i, :l, :] += features[i]
         else:
-            padded_features = torch.tensor(wav_batch)
+            padded_features = wav_batch
             feature_lengths = lengths
 
-        feature_lengths = torch.tensor(feature_lengths).long().to(padded_features.device)
+        feature_lengths = feature_lengths.long().to(padded_features.device)
 
         if self.training and self.spec_aug_conf is not None:
             padded_features, feature_lengths = self.spec_aug(padded_features, feature_lengths)
