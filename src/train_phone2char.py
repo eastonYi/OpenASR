@@ -111,7 +111,6 @@ if __name__ == "__main__":
 
         tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
         tokenizer_char = data.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
-        modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
         modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
 
         acoustic_set = data.ArkDataset(dataconfig["acoustic"], rate_in_out=None)
@@ -141,6 +140,7 @@ if __name__ == "__main__":
         model = Model.create_model(modelconfig["signal"],
                                    modelconfig["encoder"],
                                    modelconfig["assigner"],
+                                   tokenizer_phone.unit_num(),
                                    modelconfig["decoder"])
         solver = Solver(model, trainingconfig, batchiter_acoustic, batchiter_train, batchiter_dev)
 

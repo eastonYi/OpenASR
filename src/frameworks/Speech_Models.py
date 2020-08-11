@@ -614,7 +614,7 @@ class CIF_MIX(CIF_FC):
             encoded, len_encoded, step_forward_fn, vocab_size, beam_size=beam_size, max_decode_len=max_decode_len)
 
     @classmethod
-    def create_model(cls, sp_config, en_config, as_cofig, de_config):
+    def create_model(cls, sp_config, en_config, as_cofig, phone_size, de_config):
         from blocks.sp_layers import SPLayer
         from blocks.encoders import TransformerEncoder
         from blocks.attention_assigner import Attention_Assigner
@@ -625,7 +625,7 @@ class CIF_MIX(CIF_FC):
         assigner = Attention_Assigner(as_cofig)
         decoder = TransformerDecoder(de_config)
 
-        model = cls(splayer, encoder, assigner, decoder)
+        model = cls(splayer, encoder, assigner, phone_size, decoder)
 
         return model
 
