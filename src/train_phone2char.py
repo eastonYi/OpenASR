@@ -80,6 +80,30 @@ if __name__ == "__main__":
         model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
         solver = Solver(model, trainingconfig, tr_loader, cv_loader)
 
+    elif modelconfig['type'] == 'Conv_CTC':
+        from frameworks.Speech_Models import Conv_CTC as Model
+        from solvers import CTC_Solver as Solver
+
+        tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
+
+        training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
+        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
+
+        collate = data.Feat_Phone_Collate(tokenizer_phone)
+        sampler = data.FrameBasedSampler(
+            training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
+        batchiter_train = torch.utils.data.DataLoader(
+            training_set, collate_fn=collate, batch_sampler=sampler,
+            shuffle=False, num_workers=dataconfig["fetchworker_num"])
+        batchiter_dev = torch.utils.data.DataLoader(
+            valid_set, collate_fn=collate, batch_sampler=sampler,
+            shuffle=False, num_workers=dataconfig["fetchworker_num"])
+
+        model = Model.create_model(modelconfig["signal"],
+                                   modelconfig["encoder"],
+                                   vocab_size=tokenizer_phone.unit_num())
+        solver = Solver(model, trainingconfig, batchiter_train, batchiter_dev)
+
     elif modelconfig['type'] == 'CIF_FC':
         from frameworks.Speech_Models import CIF_FC as Model
         from solvers import CIF_FC_Solver as Solver

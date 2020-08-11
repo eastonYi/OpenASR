@@ -1,0 +1,51 @@
+# continue_training:
+data:
+  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train
+  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
+  vocab_phone: /home/easton/projects/OpenASR/egs/callhome_hkust/data/callhome.IPA
+  maxlen: 200
+  fetchworker_num: 2
+model:
+  type: CIF_FC
+  signal:
+    feature_type: offline
+    spec_aug:
+        freq_mask_num: 2
+        freq_mask_width: 27
+        time_mask_num: 2
+        time_mask_width: 40
+  encoder:
+    type: Transformer
+    sub:
+      type: ConvV2
+      layer_num: 1
+    input_dim: 80
+    d_model: 512
+    nhead: 8
+    dim_feedforward: 2048
+    activation: "glu"
+    num_layers: 6
+    dropout_rate: 0.1
+  assigner:
+    d_model: 512
+    n_layers: 3
+    w_context: 3
+    dropout: 0.1
+training:
+    label_type: feat_phone
+    batch_frames: 12000
+    multi_gpu: False
+    exp_dir: exp/cif_fc_2
+    print_inteval: 50
+    num_epoch: 80
+    accumulate_grad_batch: 8
+    init_lr: 1.0
+    optimtype: adam
+    grad_max_norm: 50.
+    label_smooth: 0.1
+    lambda_qua: 0.1
+    num_last_ckpt_keep: 10
+    lr_scheduler:
+        type: warmup_transformer
+        warmup_step: 10000
+        d_model: 512

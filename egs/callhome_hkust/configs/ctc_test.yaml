@@ -1,0 +1,51 @@
+# continue_training:
+data:
+  acoustic: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train
+  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/train/ja.json
+  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/dev/dev.json
+  vocab_phone: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/callhome.IPA
+  vocab_char: /Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/vocab_ja.char
+  maxlen: 200
+  fetchworker_num: 1
+model:
+  type: Conv_CTC
+  add_eos: True
+  add_blk: False
+  signal:
+    feature_type: offline
+    spec_aug:
+        freq_mask_num: 2
+        freq_mask_width: 27
+        time_mask_num: 2
+        time_mask_width: 40
+  encoder:
+    type: Transformer
+    sub:
+      type: ConvV2
+      layer_num: 1
+    input_dim: 80
+    d_model: 512
+    nhead: 4
+    dim_feedforward: 2048
+    activation: "glu"
+    num_layers: 1
+    dropout_rate: 0.1
+training:
+    label_type: feat_phone
+    batch_frames: 1000
+    multi_gpu: False
+    exp_dir: exp/ctc_fc
+    print_inteval: 1
+    num_epoch: 80
+    accumulate_grad_batch: 2
+    init_lr: 1.0
+    optimtype: adam
+    grad_max_norm: 50.
+    label_smooth: 0.1
+    lambda_qua: 0.1
+    lambda_ctc: 1.0
+    num_last_ckpt_keep: 1
+    lr_scheduler:
+        type: warmup_transformer
+        warmup_step: 10000
+        d_model: 512
