@@ -40,7 +40,7 @@ model:
     vocab_size: -1 # derived by tokenizer
     d_model: 512
     nhead: 8
-    num_layers: 6
+    num_layers: 4
     encoder_dim: 512
     dim_feedforward: 2048
     activation: "glu"
