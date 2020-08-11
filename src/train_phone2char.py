@@ -89,14 +89,14 @@ if __name__ == "__main__":
         training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
         valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
 
-        collate_acoustic = data.Feat_Phone_Collate(tokenizer_phone)
-        sampler_acoustic = data.FrameBasedSampler(
-            training_set, trainingconfig["batch_acoustic_frames"]*ngpu, ngpu, shuffle=True)
+        collate = data.Feat_Phone_Collate(tokenizer_phone)
+        sampler = data.FrameBasedSampler(
+            training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
         batchiter_train = torch.utils.data.DataLoader(
-            training_set, collate_fn=collate_acoustic, batch_sampler=sampler_acoustic,
+            training_set, collate_fn=collate, batch_sampler=sampler,
             shuffle=False, num_workers=dataconfig["fetchworker_num"])
         batchiter_dev = torch.utils.data.DataLoader(
-            valid_set, collate_fn=collate_acoustic, batch_sampler=sampler_acoustic,
+            valid_set, collate_fn=collate, batch_sampler=sampler,
             shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
         model = Model.create_model(modelconfig["signal"],
