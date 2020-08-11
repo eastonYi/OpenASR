@@ -58,18 +58,18 @@ if __name__ == "__main__":
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
 
-    tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
-    tokenizer_char = data.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
-    modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
-    modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
-
-    acoustic_set = data.ArkDataset(dataconfig["acoustic"], rate_in_out=None)
-    training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
-    valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
-
     if modelconfig['type'] == 'Embed_Decoder':
         from frameworks.Text_Models import Embed_Decoder as Model
         from solvers import Phone2Char_Solver as Solver
+
+        tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
+        tokenizer_char = data.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
+        modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
+        modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
+
+        acoustic_set = data.ArkDataset(dataconfig["acoustic"], rate_in_out=None)
+        training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
+        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
 
         collate = data.Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
         tr_loader = torch.utils.data.DataLoader(training_set,
@@ -80,9 +80,43 @@ if __name__ == "__main__":
         model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
         solver = Solver(model, trainingconfig, tr_loader, cv_loader)
 
+    elif modelconfig['type'] == 'CIF_FC':
+        from frameworks.Speech_Models import CIF_FC as Model
+        from solvers import CIF_FC_Solver as Solver
+
+        tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
+
+        training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
+        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
+
+        collate_acoustic = data.Feat_Phone_Collate(tokenizer_phone)
+        sampler_acoustic = data.FrameBasedSampler(
+            training_set, trainingconfig["batch_acoustic_frames"]*ngpu, ngpu, shuffle=True)
+        batchiter_train = torch.utils.data.DataLoader(
+            training_set, collate_fn=collate_acoustic, batch_sampler=sampler_acoustic,
+            shuffle=False, num_workers=dataconfig["fetchworker_num"])
+        batchiter_dev = torch.utils.data.DataLoader(
+            valid_set, collate_fn=collate_acoustic, batch_sampler=sampler_acoustic,
+            shuffle=False, num_workers=dataconfig["fetchworker_num"])
+
+        model = Model.create_model(modelconfig["signal"],
+                                   modelconfig["encoder"],
+                                   modelconfig["assigner"],
+                                   vocab_size=tokenizer_phone.unit_num())
+        solver = Solver(model, trainingconfig, batchiter_train, batchiter_dev)
+
     elif modelconfig['type'] == 'CIF_MIX':
         from frameworks.Speech_Models import CIF_MIX as Model
         from solvers import CIF_MIX_Solver as Solver
+
+        tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
+        tokenizer_char = data.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
+        modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
+        modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
+
+        acoustic_set = data.ArkDataset(dataconfig["acoustic"], rate_in_out=None)
+        training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
+        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
 
         collate_acoustic = data.Feat_Phone_Collate(tokenizer_phone)
         sampler_acoustic = data.FrameBasedSampler(

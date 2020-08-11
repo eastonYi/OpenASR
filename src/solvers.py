@@ -566,6 +566,80 @@ class Phone2Char_Solver(Solver):
                 utils.cleanup_ckpt(self.exp_dir, self.num_last_ckpt_keep)
 
 
+class CIF_FC_Solver(CIF_Solver):
+
+    def iter_one_epoch(self, cross_valid=False):
+
+        if cross_valid:
+            loader = self.cv_loader
+            self.model.eval()
+        else:
+            loader = self.tr_loader
+            self.model.train()
+
+        timer = utils.Timer()
+        timer.tic()
+        tot_loss = 0.
+        tot_sequence = 0
+        tot_phone_acoustic = 0
+
+        n_accu_batch = self.accumulate_grad_batch
+
+        tot_iter_num = len(loader)
+        for niter, (utts, data_acoustic) in enumerate(loader):
+            niter += 1
+            if n_accu_batch == self.accumulate_grad_batch:
+                self.optimizer.zero_grad()
+
+            feats_acoustic, len_feat_acoustic, phones_acoustic, len_phone_acoustic = \
+                (i.to(self.device) for i in data_acoustic)
+
+            # general acoustic loss
+            n_sequence = len(utts)
+            n_phone_acoustic = len_phone_acoustic.sum()
+            tot_phone_acoustic += n_phone_acoustic
+            tot_sequence+= n_sequence
+
+            loss_ctc_acoustic, loss_qua_acoustic, loss_ce_phone_acoustic = \
+                self.model(feats_acoustic, len_feat_acoustic, phones_acoustic, len_phone_acoustic,
+                           label_smooth=self.label_smooth)
+
+            loss_ce_phone_acoustic = loss_ce_phone_acoustic.sum() / n_phone_acoustic
+            loss_ctc_acoustic = loss_ctc_acoustic.sum() / n_sequence
+            loss_qua_acoustic = loss_qua_acoustic.sum() / n_sequence
+            loss_acoustic = loss_ce_phone_acoustic + \
+                   self.lambda_qua * loss_qua_acoustic + \
+                   self.lambda_ctc * loss_ctc_acoustic
+            loss_acoustic.backward()
+
+            tot_loss += loss_acoustic
+
+            n_accu_batch -= 1
+            if n_accu_batch == 0 or niter == tot_iter_num:
+                self.step += 1  # to be consistant with metric
+                clip_grad_norm_(self.model.parameters(), self.grad_max_norm)
+                self.lr_scheduler.step()   # then, update learning rate
+                self.lr_scheduler.set_lr(self.optimizer, self.init_lr)
+                self.optimizer.step()
+                n_accu_batch = self.accumulate_grad_batch
+            else:
+                continue
+
+            timer.toc()
+            if niter % self.print_inteval == 0:
+                print('''Epoch {} | Step {} | Iter {} acoustic {} | lr: {:.3e} | sent/sec: {:.1f}
+acoustic cur_all_loss: {:.3f} loss_ce_phone: {:.3f} loss_ctc: {:.3f} loss_qua: {:.3f}
+                      '''.format(
+                    self.epoch, self.step, niter, list(feats_acoustic.size()),
+                    list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc(),
+                    loss_acoustic, loss_ce_phone_acoustic, loss_ctc_acoustic, loss_qua_acoustic
+                ), flush=True)
+
+        torch.cuda.empty_cache()
+        time.sleep(2)
+        return (tot_loss/tot_phone_acoustic).item()
+
+
 class CIF_MIX_Solver(CIF_Solver):
 
     def __init__ (self, model, config, batchiter_acoustic, batchiter_train, batchiter_dev):

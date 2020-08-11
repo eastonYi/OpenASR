@@ -466,10 +466,105 @@ class CIF(Conv_CTC_Transformer):
         self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
 
 
-class CIF_MIX(CIF):
+class CIF_FC(CIF):
+    def __init__(self, splayer, encoder, assigner, vocab_size):
+        torch.nn.Module.__init__(self)
+        self.splayer = splayer
+        self.encoder = encoder
+        self.assigner = assigner
+        self.vocab_size = vocab_size
+        self.ctc_fc = nn.Linear(encoder.d_model, vocab_size, bias=False)
+        self.phone_fc = nn.Linear(encoder.d_model, vocab_size, bias=False)
+        self._reset_parameters()
+
+    def forward(self, batch_wave, lengths, phone, len_phone, label_smooth=0., threshold=0.95):
+        device = batch_wave.device
+        phone_paddings = phone.eq(0).float()
+
+        encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
+        encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
+        ctc_logits = self.ctc_fc(encoder_outputs)
+
+        len_logits_ctc = encoder_output_lengths
+        alphas = self.assigner(encoder_outputs, encoder_output_lengths)
+
+        # sum
+        _num = alphas.sum(-1)
+        # scaling
+        num = len_phone.float()
+        num_noise = num + 0.9 * torch.rand(alphas.size(0)).to(device) - 0.45
+        alphas *= (num_noise / _num)[:, None].repeat(1, alphas.size(1))
+
+        cif_outputs = self.cif(encoder_outputs, alphas, threshold=threshold)
+
+        logits_IPA = self.phone_fc(cif_outputs)
+
+        ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, phone, len_phone)
+        qua_loss = cal_qua_loss(_num, num)
+        ce_phone_loss = cal_ce_loss(logits_IPA, phone, phone_paddings, label_smooth)
+
+        return ctc_loss, qua_loss, ce_phone_loss
+
+    @staticmethod
+    def batch_beam_decode(encoded, len_encoded, step_forward_fn, vocab_size, beam_size, max_decode_len=100):
+        return Conv_Transformer.batch_beam_decode(
+            encoded, len_encoded, step_forward_fn, vocab_size, beam_size=beam_size, max_decode_len=max_decode_len)
+
+    @classmethod
+    def create_model(cls, sp_config, en_config, as_cofig, vocab_size):
+        from blocks.sp_layers import SPLayer
+        from blocks.encoders import TransformerEncoder
+        from blocks.attention_assigner import Attention_Assigner
+
+        splayer = SPLayer(sp_config)
+        encoder = TransformerEncoder(en_config)
+        assigner = Attention_Assigner(as_cofig)
+
+        model = cls(splayer, encoder, assigner, vocab_size)
+
+        return model
+
+    def package(self):
+        pkg = {
+            "splayer_config": self.splayer.config,
+            "splayer_state": self.splayer.state_dict(),
+            "encoder_config": self.encoder.config,
+            "encoder_state": self.encoder.state_dict(),
+            "assigner_config": self.assigner.config,
+            "assigner_state": self.assigner.state_dict(),
+            "ctc_fc_state": self.ctc_fc.state_dict(),
+            "phone_fc_state": self.phone_fc.state_dict(),
+             }
+        return pkg
+
+    def restore(self, pkg):
+        # check config
+        logging.info("Restore model states...")
+        for key in self.splayer.config.keys():
+            if key == "spec_aug":
+                continue
+            if self.splayer.config[key] != pkg["splayer_config"][key]:
+                raise ValueError("splayer_config mismatch.")
+        for key in self.encoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.encoder.config[key] != pkg["encoder_config"][key]):
+                raise ValueError("encoder_config mismatch.")
+        for key in self.assigner.config.keys():
+            if (key != "dropout_rate" and
+                    self.assigner.config[key] != pkg["assigner_config"][key]):
+                raise ValueError("assigner_config mismatch.")
+
+        self.splayer.load_state_dict(pkg["splayer_state"])
+        self.encoder.load_state_dict(pkg["encoder_state"])
+        self.assigner.load_state_dict(pkg["assigner_state"])
+        self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
+        self.phone_fc.load_state_dict(pkg["phone_fc_state"])
+
+
+class CIF_MIX(CIF_FC):
     def __init__(self, splayer, encoder, assigner, decoder):
         super().__init__(splayer, encoder, assigner, decoder)
-        self.phone_fc = nn.Linear(encoder.d_model, decoder.vocab_size, bias=False)
+        self.phone_fc = nn.Linear(encoder.d_model, encoder.vocab_size, bias=False)
         self._reset_parameters()
 
     def forward(self, batch_wave, lengths, phone, len_phone,
@@ -545,7 +640,7 @@ class CIF_MIX(CIF):
             "decoder_config": self.decoder.config,
             "decoder_state": self.decoder.state_dict(),
             "ctc_fc_state": self.ctc_fc.state_dict(),
-            "phone_fc_state": self.ctc_fc.state_dict(),
+            "phone_fc_state": self.phone_fc.state_dict(),
              }
         return pkg
 
