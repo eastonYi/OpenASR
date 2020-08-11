@@ -562,9 +562,9 @@ class CIF_FC(CIF):
 
 
 class CIF_MIX(CIF_FC):
-    def __init__(self, splayer, encoder, assigner, decoder):
-        super().__init__(splayer, encoder, assigner, decoder)
-        self.phone_fc = nn.Linear(encoder.d_model, encoder.vocab_size, bias=False)
+    def __init__(self, splayer, encoder, assigner, phone_size, decoder):
+        super().__init__(splayer, encoder, assigner, phone_size)
+        self.decoder = decoder
         self._reset_parameters()
 
     def forward(self, batch_wave, lengths, phone, len_phone,
