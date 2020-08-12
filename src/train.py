@@ -104,14 +104,13 @@ if __name__ == "__main__":
                                    modelconfig["assigner"],
                                    modelconfig["decoder"])
 
-    elif modelconfig['type'] == 'CIF_MIX':
-        from frameworks.Speech_Models import CIF_MIX as Model
-        from solvers import CIF_Solver as Solver
+    elif modelconfig['type'] == 'Conv_CTC':
+        from frameworks.Speech_Models import Conv_CTC as Model
+        from solvers import CTC_Solver as Solver
 
         model = Model.create_model(modelconfig["signal"],
                                    modelconfig["encoder"],
-                                   modelconfig["assigner"],
-                                   modelconfig["decoder"])
+                                   vocab_size=modelconfig["decoder"]["vocab_size"])
 
     logging.info("\nModel info:\n{}".format(model))
 

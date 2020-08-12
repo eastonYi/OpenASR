@@ -348,19 +348,19 @@ class CTC_Solver(CE_Solver):
         tot_iter_num = len(loader)
         for niter, (utts, data) in enumerate(loader):
             niter += 1
-            feats, len_feat, phones, len_phone = \
-                (i.to(self.device) for i in data)
+            feats, len_feat, target_input, targets, paddings = (i.to(self.device) for i in data)
 
-            n_token = len_phone.sum().float()
+            len_target = (1-paddings).int().sum(-1)
+            n_token = len_target.sum().float()
             tot_token += n_token
             n_sequence = len(utts)
             tot_sequence += n_sequence
 
             if cross_valid:
                 with torch.no_grad():
-                    ctc_loss = self.model(feats, len_feat, phones, len_phone)
+                    ctc_loss = self.model(feats, len_feat, targets, len_target)
             else:
-                ctc_loss = self.model(feats, len_feat, phones, len_phone)
+                ctc_loss = self.model(feats, len_feat, targets, len_target)
 
             loss = ctc_loss.sum()/n_sequence
             tot_loss += ctc_loss
@@ -383,7 +383,7 @@ class CTC_Solver(CE_Solver):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('Epoch {} | Step {} | Iter {}/{} batch {} \ncur_loss: {:.3f} avg_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
+                print('Epoch {} | Step {} | Batch {}/{} {} \ncur_loss: {:.3f} avg_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
                     self.epoch, self.step, niter, tot_iter_num, list(feats.size()),
                     loss, tot_loss / tot_sequence,
                     list(self.optimizer.param_groups)[0]["lr"],
