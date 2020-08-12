@@ -146,12 +146,16 @@ class ArkDataset(SpeechDataset):
         except:
             # json_path is a dir where *.json in
             data = []
-            for dir, _, fs in os.walk(os.path.dirname(json_path)):   # os.walk获取所有的目录
+            for dir, _, fs in os.walk(json_path):   # os.walk获取所有的目录
                 for f in fs:
                     if f.endswith('.json'):  # 判断是否是".json"结尾
                         filename = os.path.join(dir, f)
+                        print('loading json file :', filename)
                         with open(filename) as f:
-                            data.extend(json.load(f))
+                            add = json.load(f)
+                            data.extend(add)
+                        print('loaded {} samples'.format(len(add)))
+
         # filter
         if rate_in_out:
             list_to_pop = []

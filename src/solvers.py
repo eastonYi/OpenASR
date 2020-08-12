@@ -351,19 +351,18 @@ class CTC_Solver(CE_Solver):
             feats, len_feat, phones, len_phone = \
                 (i.to(self.device) for i in data)
 
+            n_token = len_phone.sum().float()
+            tot_token += n_token
+            n_sequence = len(utts)
+            tot_sequence += n_sequence
+
             if cross_valid:
                 with torch.no_grad():
                     ctc_loss = self.model(feats, len_feat, phones, len_phone)
             else:
                 ctc_loss = self.model(feats, len_feat, phones, len_phone)
 
-            n_token = len_phone.sum().float()
-            tot_token += n_token
-            n_sequence = len(utts)
-            tot_sequence += n_sequence
-
             loss = ctc_loss.sum()/n_sequence
-
             tot_loss += ctc_loss
 
             # compute gradients
@@ -384,8 +383,8 @@ class CTC_Solver(CE_Solver):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('Epoch {} | Step {} | Iter {} batch {} \ncur_loss: {:.3f} avg_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
-                    self.epoch, self.step, niter, list(feats.size()),
+                print('Epoch {} | Step {} | Iter {}/{} batch {} \ncur_loss: {:.3f} avg_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
+                    self.epoch, self.step, niter, tot_iter_num, list(feats.size()),
                     loss, tot_loss / tot_sequence,
                     list(self.optimizer.param_groups)[0]["lr"],
                     tot_sequence/timer.toc()

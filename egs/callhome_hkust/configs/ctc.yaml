@@ -4,7 +4,7 @@ data:
   devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
   vocab_phone: /home/easton/projects/OpenASR/egs/callhome_hkust/data/callhome.IPA
   maxlen: 200
-  fetchworker_num: 2
+  fetchworker_num: 8
 model:
   type: Conv_CTC
   signal:

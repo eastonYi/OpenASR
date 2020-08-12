@@ -90,14 +90,16 @@ if __name__ == "__main__":
         valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
 
         collate = data.Feat_Phone_Collate(tokenizer_phone)
-        sampler = data.FrameBasedSampler(
+        sampler_train = data.FrameBasedSampler(
             training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
+        sampler_dev = data.FrameBasedSampler(
+            valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
         batchiter_train = torch.utils.data.DataLoader(
-            training_set, collate_fn=collate, batch_sampler=sampler,
+            training_set, collate_fn=collate, batch_sampler=sampler_train,
             shuffle=False, num_workers=dataconfig["fetchworker_num"])
         batchiter_dev = torch.utils.data.DataLoader(
-            valid_set, collate_fn=collate, batch_sampler=sampler,
-            shuffle=False, num_workers=dataconfig["fetchworker_num"])
+            valid_set, collate_fn=collate, batch_sampler=sampler_dev,
+            shuffle=False, num_workers=2)
 
         model = Model.create_model(modelconfig["signal"],
                                    modelconfig["encoder"],
@@ -114,13 +116,15 @@ if __name__ == "__main__":
         valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
 
         collate = data.Feat_Phone_Collate(tokenizer_phone)
-        sampler = data.FrameBasedSampler(
+        sampler_train = data.FrameBasedSampler(
             training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
+        sampler_dev = data.FrameBasedSampler(
+            valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
         batchiter_train = torch.utils.data.DataLoader(
-            training_set, collate_fn=collate, batch_sampler=sampler,
+            training_set, collate_fn=collate, batch_sampler=sampler_train,
             shuffle=False, num_workers=dataconfig["fetchworker_num"])
         batchiter_dev = torch.utils.data.DataLoader(
-            valid_set, collate_fn=collate, batch_sampler=sampler,
+            valid_set, collate_fn=collate, batch_sampler=sampler_dev,
             shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
         model = Model.create_model(modelconfig["signal"],
