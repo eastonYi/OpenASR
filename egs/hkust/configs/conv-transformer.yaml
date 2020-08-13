@@ -2,7 +2,7 @@ continue_training:
 data:
   trainset: /data3/easton/data/HKUST/HKUST_80_new/train/hkust_train.json
   devset: /data3/easton/data/HKUST/HKUST_80_new/dev/hkust_dev.json
-  vocab_path: /data3/easton/data/HKUST/HKUST_80_new/vocab.chars
+  vocab_path: /data3/easton/data/HKUST/HKUST_80_new/vocab.char
   fetchworker_num: 4
   feat_range: 1,1000
   label_range: 0,50
