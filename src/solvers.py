@@ -191,8 +191,8 @@ class CE_Solver(Solver):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('Epoch {} | Step {} | Iter {} batch {} \ncur_all_loss: {:.3f} ce_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
-                    self.epoch, self.step, niter, list(feats.size()),
+                print('Epoch {} | Step {} | Batch {}/{} {} \ncur_all_loss: {:.3f} ce_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
+                    self.epoch, self.step, niter, tot_iter_num, list(feats.size()),
                     loss, tot_loss / tot_token, list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
                 ), flush=True)
 
