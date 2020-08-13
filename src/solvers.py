@@ -152,7 +152,7 @@ class CE_Solver(Solver):
             feats, len_feat, target_in, targets, paddings = \
                 (i.to(self.device) for i in data)
 
-            if niter == 1:
+            if niter == 1 and self.epoch == 1:
                 print('feats:\t{}\nlen_feat:\t{}\ntarget_in:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
                     feats.size(), len_feat.size(), target_in.size(), targets.size(), paddings.size()))
                 print('feats:\n{}\nlen_feat:\t{}\ntarget_in:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
@@ -349,7 +349,7 @@ class CTC_Solver(CE_Solver):
             niter += 1
             feats, len_feat, _, targets, paddings = (i.to(self.device) for i in data)
 
-            if niter == 1:
+            if niter == 1 and self.epoch == 1:
                 print('feats:\t{}\nlen_feat:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
                     feats.size(), len_feat.size(), targets.size(), paddings.size()))
                 print('feats:\n{}\nlen_feat:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
@@ -904,7 +904,7 @@ class CIF_MIX_Solver(CIF_Solver):
             feats, len_feat, phones, len_phone, target_in, targets, paddings = \
                 (i.to(self.device) for i in data)
 
-            if niter == 1:
+            if niter == 1 and self.epoch == 1:
                 print('feats_acoustic:\t{}\nlen_feat_acoustic:\t{}\nphones_acoustic:\t{}\nlen_phone_acoustic:\t{}'.format(
                     feats_acoustic.size(), len_feat_acoustic.size(), phones_acoustic.size(), len_phone_acoustic.size()))
                 print('feats_acoustic:\n{}\nlen_feat_acoustic:\t{}\nphones_acoustic:\t{}\nlen_phone_acoustic:\t{}'.format(
@@ -966,11 +966,11 @@ class CIF_MIX_Solver(CIF_Solver):
 
             timer.toc()
             if niter % self.print_inteval == 0:
-                print('''Epoch {} | Step {} | Iter {} acoustic {} | target {} | lr: {:.3e} | sent/sec: {:.1f}
+                print('''Epoch {} | Step {} | acoustic {}/{} {} | target {} | lr: {:.3e} | sent/sec: {:.1f}
 acoustic cur_all_loss: {:.3f} loss_ce_phone: {:.3f} loss_ctc: {:.3f} loss_qua: {:.3f}
 target   cur_all_loss: {:.3f} loss_ce_phone: {:.3f} loss_ctc: {:.3f} loss_qua: {:.3f} loss_ce_char: {:.3f}
                       '''.format(
-                    self.epoch, self.step, niter, list(feats_acoustic.size()), list(feats.size()),
+                    self.epoch, self.step, niter, tot_iter_num, list(feats_acoustic.size()), list(feats.size()),
                     list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc(),
                     loss_acoustic, loss_ce_phone_acoustic, loss_ctc_acoustic, loss_qua_acoustic,
                     loss, loss_ce_phone, loss_ctc, loss_qua, loss_ce_target,

@@ -48,7 +48,7 @@ model:
     dropout_rate: 0.1
 training:
     label_type: feat_phone_char
-    batch_acoustic_frames: 14000
+    batch_acoustic_frames: 16000
     batch_frames: 1000
     multi_gpu: False
     exp_dir: exp/cif_mix_ja
