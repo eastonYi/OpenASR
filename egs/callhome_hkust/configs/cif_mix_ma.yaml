@@ -4,8 +4,9 @@ data:
   devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ma_dev.json
   vocab_phone: /home/easton/projects/OpenASR/egs/callhome_hkust/data/callhome.IPA
   vocab_char: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ma.char
-  maxlen: 200
   fetchworker_num: 4
+  feat_range: 1,1000
+  label_range: 0,50
 model:
   type: CIF_MIX
   add_eos: True

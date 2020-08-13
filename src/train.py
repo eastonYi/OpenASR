@@ -55,6 +55,9 @@ if __name__ == "__main__":
     trainingconfig = config["training"]
     modelconfig = config["model"]
 
+    feat_range = [int(i) for i in dataconfig['feat_range'].split(',')]
+    label_range = [int(i) for i in dataconfig['label_range'].split(',')]
+
     ngpu = 1
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
@@ -62,7 +65,7 @@ if __name__ == "__main__":
     tokenizer = data.CharTokenizer(dataconfig["vocab_path"], add_blk=modelconfig['add_blk'])
     modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
     if modelconfig['signal']["feature_type"] == 'offline':
-        training_set = data.ArkDataset(dataconfig["trainset"])
+        training_set = data.ArkDataset(dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
         valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
         collate = data.FeatureCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"], trainingconfig["label_type"])
         trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)

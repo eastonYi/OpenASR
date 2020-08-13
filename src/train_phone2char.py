@@ -54,6 +54,9 @@ if __name__ == "__main__":
     trainingconfig = config["training"]
     modelconfig = config["model"]
 
+    feat_range = [int(i) for i in dataconfig['feat_range'].split(',')]
+    label_range = [int(i) for i in dataconfig['label_range'].split(',')]
+
     ngpu = 1
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
@@ -67,8 +70,8 @@ if __name__ == "__main__":
         modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
         modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
 
-        acoustic_set = data.ArkDataset(dataconfig["acoustic"], rate_in_out=None)
-        training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
+        acoustic_set = data.ArkDataset(dataconfig["acoustic"], feat_range=feat_range, label_range=label_range)
+        training_set = data.ArkDataset(dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
         valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
 
         collate = data.Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
@@ -86,8 +89,10 @@ if __name__ == "__main__":
 
         tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
 
-        training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
-        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
+        training_set = data.ArkDataset(
+            dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
+        valid_set = data.ArkDataset(
+            dataconfig["devset"], reverse=True, feat_range=feat_range, label_range=label_range)
 
         collate = data.Feat_Phone_Collate(tokenizer_phone)
         sampler_train = data.FrameBasedSampler(
@@ -112,8 +117,10 @@ if __name__ == "__main__":
 
         tokenizer_phone = data.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
 
-        training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
-        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
+        training_set = data.ArkDataset(
+            dataconfig["trainset"], rate_in_out=None, feat_range=feat_range, label_range=label_range)
+        valid_set = data.ArkDataset(
+            dataconfig["devset"], reverse=True, feat_range=feat_range, label_range=label_range)
 
         collate = data.Feat_Phone_Collate(tokenizer_phone)
         sampler_train = data.FrameBasedSampler(
@@ -141,9 +148,12 @@ if __name__ == "__main__":
         tokenizer_char = data.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
         modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
 
-        acoustic_set = data.ArkDataset(dataconfig["acoustic"], rate_in_out=None)
-        training_set = data.ArkDataset(dataconfig["trainset"], rate_in_out=None)
-        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
+        acoustic_set = data.ArkDataset(
+            dataconfig["acoustic"], feat_range=feat_range, label_range=label_range)
+        training_set = data.ArkDataset(
+            dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
+        valid_set = data.ArkDataset(
+            dataconfig["devset"], reverse=True, feat_range=feat_range, label_range=label_range)
 
         collate_acoustic = data.Feat_Phone_Collate(tokenizer_phone)
         sampler_acoustic = data.FrameBasedSampler(

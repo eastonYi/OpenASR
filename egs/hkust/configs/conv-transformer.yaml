@@ -1,15 +1,13 @@
-# continue_training:
+continue_training:
 data:
-  acoustic: /data3/easton/data/CALLHOME_Multilingual/jsons/train
-  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train/ja_train.json
-  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
-  vocab_phone: /home/easton/projects/OpenASR/egs/callhome_hkust/data/callhome.IPA
-  vocab_char: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ja.char
+  trainset: /data3/easton/data/HKUST/HKUST_80_new/train/hkust_train.json
+  devset: /data3/easton/data/HKUST/HKUST_80_new/dev/hkust_dev.json
+  vocab_path: /data3/easton/data/HKUST/HKUST_80_new/vocab.chars
   fetchworker_num: 4
   feat_range: 1,1000
   label_range: 0,50
 model:
-  type: CIF_MIX
+  type: conv-transformer
   add_eos: True
   add_blk: False
   signal:
@@ -23,44 +21,36 @@ model:
     type: Transformer
     sub:
       type: ConvV2
-      layer_num: 1
+      layer_num: 2
     input_dim: 80
     d_model: 512
     nhead: 8
     dim_feedforward: 2048
     activation: "glu"
-    num_layers: 4
+    num_layers: 6
     dropout_rate: 0.1
-  assigner:
-    d_model: 512
-    n_layers: 3
-    w_context: 3
-    dropout: 0.1
   decoder:
     type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer
     d_model: 512
     nhead: 8
-    num_layers: 4
+    num_layers: 6
     encoder_dim: 512
     dim_feedforward: 2048
     activation: "glu"
     dropout_rate: 0.1
 training:
-    label_type: feat_phone_char
-    batch_acoustic_frames: 14000
-    batch_frames: 1000
+    label_type: tokens
+    batch_frames: 20000
     multi_gpu: False
-    exp_dir: exp/cif_mix_ja
-    print_inteval: 50
+    exp_dir: exp/conv-transformer
+    print_inteval: 500
     num_epoch: 80
     accumulate_grad_batch: 8
-    init_lr: 0.1
+    init_lr: 1.0
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    lambda_qua: 0.1
-    lambda_ctc: 1.0
     num_last_ckpt_keep: 10
     lr_scheduler:
         type: warmup_transformer

@@ -140,7 +140,8 @@ class SpeechDataset(data.Dataset):
 
 
 class ArkDataset(SpeechDataset):
-    def __init__(self, json_path, reverse=False, rate_in_out=(4,999)):
+    def __init__(self, json_path, reverse=False,
+                 feat_range=(1, 99999), label_range=(1, 100), rate_in_out=(4,999)):
         try:
             # json_path is a single file
             with open(json_path) as f:
@@ -159,15 +160,17 @@ class ArkDataset(SpeechDataset):
                         print('loaded {} samples'.format(len(add)))
 
         # filter
-        if rate_in_out:
-            list_to_pop = []
-            for i, sample in enumerate(data):
-                len_x = sample['feat_length']
-                len_y = sample['token_length']
-                if len_x < 1 or len_y < 1 or not (rate_in_out[0] <= (len_x / len_y) <= rate_in_out[1]):
-                    list_to_pop.append(i)
-            list_to_pop.reverse()
-            [data.pop(i) for i in list_to_pop]
+        list_to_pop = []
+        for i, sample in enumerate(data):
+            len_x = sample['feat_length']
+            len_y = sample['token_length']
+            if not (feat_range[0] <= len_x <= feat_range[1]) or \
+               not (label_range[0] <= len_y <= label_range[1]) or \
+               not (rate_in_out[0] <= (len_x / len_y) <= rate_in_out[1]):
+                list_to_pop.append(i)
+        print('filtered {}/{} samples\n'.format(len(list_to_pop), len(data)))
+        list_to_pop.reverse()
+        [data.pop(i) for i in list_to_pop]
 
         self.data = sorted(data, key=lambda x: float(x["feat_length"]))
         if reverse:
@@ -397,8 +400,20 @@ def kaldi_feat_collate(batch):
 
 
 if __name__ == '__main__':
-    paths = ['/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:102502',
-             '/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:102502',
-             '/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:102502',
-             '/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:24']
-    load_feat_batch(paths)
+    # paths = ['/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:102502',
+    #          '/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:102502',
+    #          '/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:102502',
+    #          '/Users/easton/Projects/OpenASR_BaiYe/egs/callhome_hkust/data/feats_cmvn.ark:24']
+    # load_feat_batch(paths)
+    dataset = ArkDataset('/data3/easton/data/CALLHOME_Multilingual/jsons/train',
+                         feat_range=(1, 1000), label_range=(0, 50))
+    from collections import defaultdict
+    counter = defaultdict(lambda: 0)
+    threash = 1000
+    for sample in dataset:
+        if sample['feat_length'] > threash:
+            utt = sample['uttid'].split('_')[0]
+            counter[utt] += 1
+            print(sample['uttid'])
+    import pdb; pdb.set_trace()
+    print('')

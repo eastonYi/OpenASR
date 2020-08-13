@@ -902,8 +902,18 @@ class CIF_MIX_Solver(CIF_Solver):
 
             feats_acoustic, len_feat_acoustic, phones_acoustic, len_phone_acoustic = \
                 (i.to(self.device) for i in data_acoustic)
-            feats, len_feat, phones, len_phone, target_in, target_out, paddings = \
+            feats, len_feat, phones, len_phone, target_in, targets, paddings = \
                 (i.to(self.device) for i in data)
+
+            if niter == 1:
+                print('feats_acoustic:\t{}\nlen_feat_acoustic:\t{}\nphones_acoustic:\t{}\nlen_phone_acoustic:\t{}'.format(
+                    feats_acoustic.size(), len_feat_acoustic.size(), phones_acoustic.size(), len_phone_acoustic.size()))
+                print('feats_acoustic:\n{}\nlen_feat_acoustic:\t{}\nphones_acoustic:\t{}\nlen_phone_acoustic:\t{}'.format(
+                    feats_acoustic[0], len_feat_acoustic[0], phones_acoustic[0], len_phone_acoustic[0]))
+                print('feats:\t{}\nlen_feat:\t{}\nphones:\t{}\nlen_phone:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
+                    feats.size(), len_feat.size(), phones.size(), len_phone.size(), target_in.size(), targets.size(), paddings.size()))
+                print('feats:\n{}\nlen_feat:\t{}\nphones:\t{}\nlen_phone:\t{}\ntarget_in:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
+                    feats[0], len_feat[0], phones[0], len_phone[0], target_in[0], targets[0], paddings[0]))
 
             # general acoustic loss
             n_phone_acoustic = len_phone_acoustic.sum()
@@ -924,7 +934,7 @@ class CIF_MIX_Solver(CIF_Solver):
             loss_acoustic.backward()
 
             loss_ctc, loss_qua, loss_ce_phone, loss_ce_target = \
-                self.model(feats, len_feat, phones, len_phone, target_in, target_out, paddings,
+                self.model(feats, len_feat, phones, len_phone, target_in, targets, paddings,
                            label_smooth=self.label_smooth)
 
             n_phone = len_phone.sum()
