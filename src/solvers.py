@@ -348,7 +348,13 @@ class CTC_Solver(CE_Solver):
         tot_iter_num = len(loader)
         for niter, (utts, data) in enumerate(loader):
             niter += 1
-            feats, len_feat, target_input, targets, paddings = (i.to(self.device) for i in data)
+            feats, len_feat, _, targets, paddings = (i.to(self.device) for i in data)
+
+            if niter == 1:
+                print('feats:\t{}\nlen_feat:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
+                    feats.size(), len_feat.size(), targets.size(), paddings.size()))
+                print('feats:\n{}\nlen_feat:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
+                    feats[0], len_feat[0], targets[0], paddings[0]))
 
             len_target = (1-paddings).int().sum(-1)
             n_token = len_target.sum().float()
@@ -359,6 +365,10 @@ class CTC_Solver(CE_Solver):
             if cross_valid:
                 with torch.no_grad():
                     ctc_loss = self.model(feats, len_feat, targets, len_target)
+                    if niter == 1:
+                        logits, len_logits = self.model.get_logits(feats[:1], len_feat[:1])
+                        print('infer:', torch.argmax(logits[0], -1)[:len_logits[0]].tolist())
+                        print('target:', targets[0][:len_target[0]].tolist())
             else:
                 ctc_loss = self.model(feats, len_feat, targets, len_target)
 

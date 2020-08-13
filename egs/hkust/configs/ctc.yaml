@@ -32,7 +32,7 @@ model:
     vocab_size: -1
 training:
     label_type: tokens
-    batch_frames: 10000
+    batch_frames: 30000
     multi_gpu: False
     exp_dir: exp/ctc
     print_inteval: 50

@@ -36,9 +36,11 @@ SPECIAL_SYM_SET = {SOS_SYM, EOS_SYM, UNK_SYM, BLK_SYM,
 
 class CharTokenizer(object):
     def __init__(self, fn_vocab, add_blk=False):
+        units = [UNK_SYM, SOS_SYM, EOS_SYM]
         with open(fn_vocab, 'r') as f:
-            units = f.read().strip().split('\n')
-        units = [UNK_SYM, SOS_SYM, EOS_SYM] + units
+            for line in f:
+                unit = line.strip().split()[0]
+                units.append(unit)
         if add_blk:
             units += [BLK_SYM]
         self.unit2id = {k:v for v,k in enumerate(units)}

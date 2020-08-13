@@ -28,11 +28,11 @@ logging.basicConfig(
 def get_args():
     parser = argparse.ArgumentParser(description="""
      Usage: feedforward.py <model_pkg> <wav_scp> <output_path>""")
-    parser.add_argument("model_type", help="path to model package.")
-    parser.add_argument("model_pkg", help="path to model package.")
-    parser.add_argument("vocab_file", help="path to vocabulary file.")
-    parser.add_argument("json_file", help="data directory")
-    parser.add_argument("output", help="output")
+    parser.add_argument("--model_type", help="path to model package.")
+    parser.add_argument("--model_pkg", help="path to model package.")
+    parser.add_argument("--vocab_file", help="path to vocabulary file.")
+    parser.add_argument("--json_file", help="data directory")
+    parser.add_argument("--output", help="output")
     parser.add_argument("--batch_frames", type=int, default=20, help="batch_size")
     parser.add_argument("--nbest", type=int, default=13, help="nbest")
     parser.add_argument("--maxlen", type=int, default=80, help="max_length")
@@ -78,19 +78,36 @@ if __name__ == "__main__":
                                        pkg["model"]["decoder_config"])
 
     elif args.model_type.lower() == 'conv-ctc-transformer':
-        from models import Conv_CTC_Transformer as Model
+        from frameworks.Speech_Models import Conv_CTC_Transformer as Model
 
         model = Model.create_model(pkg["model"]["splayer_config"],
                                    pkg["model"]["encoder_config"],
                                    pkg["model"]["decoder_config"])
 
     elif args.model_type.lower() == 'cif':
-        from models import CIF as Model
+        from frameworks.Speech_Models import CIF as Model
 
         model = Model.create_model(pkg["model"]["splayer_config"],
                                    pkg["model"]["encoder_config"],
                                    pkg["model"]["assigner_config"],
                                    pkg["model"]["decoder_config"])
+
+    elif args.model_type.lower() == 'conv_ctc':
+        from frameworks.Speech_Models import Conv_CTC as Model
+
+        blank_index = tokenizer.unit_num() - 1
+        if args.nbest == 1:
+            from third_party.ctc_infer import GreedyDecoder
+            decode = GreedyDecoder(blank_index=blank_index)
+        else:
+            from third_party.ctc_infer import BeamDecoder
+            decode = BeamDecoder(beam_width=args.nbest, blank_index=blank_index)
+
+        model = Model.create_model(pkg["model"]["splayer_config"],
+                                   pkg["model"]["encoder_config"],
+                                   pkg["model"]["vocab_size"])
+        model.decode = decode
+
     else:
         raise NotImplementedError('not found model_type!')
 
@@ -122,11 +139,19 @@ if __name__ == "__main__":
             wave_lengths = wave_lengths.cuda()
 
         with torch.no_grad():
-            encoded, len_encoded = model.get_encoded(padded_waveforms, wave_lengths)
-            pred_ids, len_decodeds, scores = model.batch_beam_decode(
-                encoded, len_encoded, model.decoder.step_forward,
-                vocab_size=tokenizer.unit_num(),
-                beam_size=args.nbest, max_decode_len=args.maxlen)
+            if args.model_type.lower() == 'conv_ctc':
+                logits, len_logits = model.get_logits(padded_waveforms, wave_lengths)
+                pred_ids, len_decodeds, scores = model.batch_beam_decode(
+                    logits, len_logits, model.decode,
+                    vocab_size=tokenizer.unit_num(),
+                    beam_size=args.nbest, max_decode_len=args.maxlen)
+            else:
+                encoded, len_encoded = model.get_encoded(padded_waveforms, wave_lengths)
+                pred_ids, len_decodeds, scores = model.batch_beam_decode(
+                    encoded, len_encoded, model.decoder.step_forward,
+                    vocab_size=tokenizer.unit_num(),
+                    beam_size=args.nbest, max_decode_len=args.maxlen)
+
         pred_ids = pred_ids.cpu().numpy()
         len_decodeds = len_decodeds.cpu().tolist()
         scores = scores.cpu().numpy()
