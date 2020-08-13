@@ -147,23 +147,22 @@ class CE_Solver(Solver):
         n_accu_batch = self.accumulate_grad_batch
 
         tot_iter_num = len(loader)
-        for niter, data in enumerate(loader):
+        for niter, (utts, data) in enumerate(loader):
             niter += 1
-            utts, padded_waveforms, wave_lengths, target_input, target, paddings = data
+            feats, len_feat, target_in, targets, paddings = \
+                (i.to(self.device) for i in data)
+
+            if niter == 1:
+                print('feats:\t{}\nlen_feat:\t{}\ntarget_in:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
+                    feats.size(), len_feat.size(), target_in.size(), targets.size(), paddings.size()))
+                print('feats:\n{}\nlen_feat:\t{}\ntarget_in:\t{}\ntargets:\t{}\npaddings:\t{}'.format(
+                    feats[0], len_feat[0], target_in[0], targets[0], paddings[0]))
 
             if cross_valid:
                 with torch.no_grad():
-                    ce_loss = self.model(padded_waveforms,
-                            wave_lengths.long(),
-                            target_input.long(),
-                            target.long(),
-                            paddings.long())
+                    ce_loss = self.model(feats, len_feat, target_in, targets, paddings)
             else:
-                ce_loss = self.model(padded_waveforms,
-                        wave_lengths.long(),
-                        target_input.long(),
-                        target.long(),
-                        paddings.long(),
+                ce_loss = self.model(feats, len_feat, target_in, targets, paddings,
                         label_smooth=self.label_smooth)
 
             n_token = torch.sum(1-paddings).float()
@@ -193,7 +192,7 @@ class CE_Solver(Solver):
             timer.toc()
             if niter % self.print_inteval == 0:
                 print('Epoch {} | Step {} | Iter {} batch {} \ncur_all_loss: {:.3f} ce_loss: {:.3f} lr: {:.3e} sent/sec: {:.3f}\n'.format(
-                    self.epoch, self.step, niter, list(padded_waveforms.size()),
+                    self.epoch, self.step, niter, list(feats.size()),
                     loss, tot_loss / tot_token, list(self.optimizer.param_groups)[0]["lr"], tot_sequence/timer.toc()
                 ), flush=True)
 
