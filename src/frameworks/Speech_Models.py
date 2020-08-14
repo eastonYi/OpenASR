@@ -707,7 +707,7 @@ class Conv_CTC(torch.nn.Module):
         beam_results, beam_scores, timesteps, out_seq_len = decode_fn.decode(prob)
         # preds_sorted, len_decoded_sorted, scores_sorted = decode(log_prob, len_logits)
 
-        return beam_results, beam_scores, out_seq_len
+        return beam_results, out_seq_len, beam_scores
 
     @classmethod
     def create_model(cls, sp_config, en_config, vocab_size):

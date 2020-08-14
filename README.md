@@ -20,12 +20,10 @@ wer 6.44
 
 
 ### hkust
-ref len 55894
-sub 19.41
-del 3.05
-ins 3.90
-wer 26.35
-wer 26.35
+| Model | #Snt | #Wrd |   Sub  |  Del  | Ins  |  CER(avg) |
+| :---: | :-: | :----: |:----: |:----: |:----: | :----: |
+| Conv-Transformer | 5236 | 55894 | 19.41 | 3.05 |  3.90 |  26.35 |
+| Conv-CTC  | 5236 | 55894 | 21.27 | 3.90 | 2.74 | 27.91 |
 
 ## Features
 

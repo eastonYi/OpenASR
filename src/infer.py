@@ -95,13 +95,15 @@ if __name__ == "__main__":
     elif args.model_type.lower() == 'conv_ctc':
         from frameworks.Speech_Models import Conv_CTC as Model
 
+        assert args.add_blk
         blank_index = tokenizer.unit_num() - 1
         if args.nbest == 1:
             from third_party.ctc_infer import GreedyDecoder
             decode_fn = GreedyDecoder(blank_index=blank_index)
         else:
             from ctcdecode import CTCBeamDecoder
-            decode_fn = CTCBeamDecoder(list(tokenizer.unit2id.items),
+            import pdb; pdb.set_trace()
+            decode_fn = CTCBeamDecoder(list(tokenizer.unit2id.keys()),
                                      beam_width=args.nbest,
                                      blank_id=blank_index,
                                      num_processes=10)
@@ -148,7 +150,6 @@ if __name__ == "__main__":
                     logits, len_logits, model.decode_fn,
                     vocab_size=tokenizer.unit_num(),
                     beam_size=args.nbest, max_decode_len=args.maxlen)
-                import pdb; pdb.set_trace()
             else:
                 encoded, len_encoded = model.get_encoded(padded_waveforms, wave_lengths)
                 pred_ids, len_decodeds, scores = model.batch_beam_decode(
