@@ -705,7 +705,6 @@ class Conv_CTC(torch.nn.Module):
 
         prob = torch.softmax(logits, -1)
         beam_results, beam_scores, timesteps, out_seq_len = decode_fn.decode(prob)
-        # preds_sorted, len_decoded_sorted, scores_sorted = decode(log_prob, len_logits)
 
         return beam_results, out_seq_len, beam_scores
 

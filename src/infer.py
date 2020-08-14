@@ -94,19 +94,15 @@ if __name__ == "__main__":
 
     elif args.model_type.lower() == 'conv_ctc':
         from frameworks.Speech_Models import Conv_CTC as Model
+        from ctcdecode import CTCBeamDecoder
 
         assert args.add_blk
         blank_index = tokenizer.unit_num() - 1
-        if args.nbest == 1:
-            from third_party.ctc_infer import GreedyDecoder
-            decode_fn = GreedyDecoder(blank_index=blank_index)
-        else:
-            from ctcdecode import CTCBeamDecoder
-            import pdb; pdb.set_trace()
-            decode_fn = CTCBeamDecoder(list(tokenizer.unit2id.keys()),
-                                     beam_width=args.nbest,
-                                     blank_id=blank_index,
-                                     num_processes=10)
+
+        decode_fn = CTCBeamDecoder(list(tokenizer.unit2id.keys()),
+                                 beam_width=args.nbest,
+                                 blank_id=blank_index,
+                                 num_processes=10)
 
         model = Model.create_model(pkg["model"]["splayer_config"],
                                    pkg["model"]["encoder_config"],

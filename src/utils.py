@@ -40,6 +40,7 @@ class AttrDict(dict):
 
 def cycle(iterable):
     while True:
+        print('new loop on', iterable)
         for x in iterable:
             yield x
 

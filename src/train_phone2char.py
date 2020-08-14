@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
         acoustic_set = data.ArkDataset(dataconfig["acoustic"], feat_range=feat_range, label_range=label_range)
         training_set = data.ArkDataset(dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
-        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True, rate_in_out=None)
+        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
 
         collate = data.Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
         tr_loader = torch.utils.data.DataLoader(training_set,
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         training_set = data.ArkDataset(
             dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
         valid_set = data.ArkDataset(
-            dataconfig["devset"], reverse=True, feat_range=feat_range, label_range=label_range)
+            dataconfig["devset"], reverse=True)
 
         collate = data.Feat_Phone_Collate(tokenizer_phone)
         sampler_train = data.FrameBasedSampler(
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         training_set = data.ArkDataset(
             dataconfig["trainset"], rate_in_out=None, feat_range=feat_range, label_range=label_range)
         valid_set = data.ArkDataset(
-            dataconfig["devset"], reverse=True, feat_range=feat_range, label_range=label_range)
+            dataconfig["devset"], reverse=True)
 
         collate = data.Feat_Phone_Collate(tokenizer_phone)
         sampler_train = data.FrameBasedSampler(
@@ -153,7 +153,7 @@ if __name__ == "__main__":
         training_set = data.ArkDataset(
             dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
         valid_set = data.ArkDataset(
-            dataconfig["devset"], reverse=True, feat_range=feat_range, label_range=label_range)
+            dataconfig["devset"], reverse=True)
 
         collate_acoustic = data.Feat_Phone_Collate(tokenizer_phone)
         sampler_acoustic = data.FrameBasedSampler(

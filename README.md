@@ -7,20 +7,14 @@ A pytorch based end2end speech recognition system. The main architecture is [Spe
 ## Results
 
 ### aishell1
-Conv-Transformer
-ref len 104765
-sub 6.02
-del 0.24
-ins 0.17
-wer 6.44
 
-| Model | #Snt | #Wrd |   Sub  |  Del  | Ins  |  CER(avg) |
+| Model | #Snt | #Wrd |   Sub  |  Del  | Ins  |  CER|
 | :---: | :-: | :----: |:----: |:----: |:----: | :----: |
 | Conv-Transformer | 7176 | 104765 | 6.02  |  0.24 |  0.17  | 6.44 |
 
 
 ### hkust
-| Model | #Snt | #Wrd |   Sub  |  Del  | Ins  |  CER(avg) |
+| Model | #Snt | #Wrd |   Sub  |  Del  | Ins  |  CER |
 | :---: | :-: | :----: |:----: |:----: |:----: | :----: |
 | Conv-Transformer | 5236 | 55894 | 19.41 | 3.05 |  3.90 |  26.35 |
 | Conv-CTC  | 5236 | 55894 | 21.27 | 3.90 | 2.74 | 27.91 |
@@ -36,7 +30,7 @@ wer 6.44
 * python >= 3.6
 * pytorch >= 1.5
 * pyyaml >= 5.1
-* tensorflow and tensorboardX for visualization. (if you do not need visualize the results, you can set TENSORBOARD_LOGGING to 0 in src/utils.py)
+* [ctcdecode](https://github.com/parlance/ctcdecode/) >= 0.7(optional)
 
 ## Usage
 We use KALDI style example organization. The example directory include top-level shell scripts, data directory, exp directory. We provide an AISHELL-1 example. The path is ROOT/egs/aishell1/s5.
