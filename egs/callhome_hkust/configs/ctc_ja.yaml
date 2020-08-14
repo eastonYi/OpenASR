@@ -1,12 +1,15 @@
 # continue_training:
 data:
-  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train
+  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train/ja_train.json
   devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
-  vocab_phone: /home/easton/projects/OpenASR/egs/callhome_hkust/data/callhome.IPA
-  maxlen: 200
-  fetchworker_num: 4
+  vocab_path: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ja.char
+  fetchworker_num: 2
+  feat_range: 1,1000
+  label_range: 0,50
 model:
   type: Conv_CTC
+  add_eos: False
+  add_blk: True
   signal:
     feature_type: offline
     spec_aug:
@@ -18,7 +21,7 @@ model:
     type: Transformer
     sub:
       type: ConvV2
-      layer_num: 1
+      layer_num: 2
     input_dim: 80
     d_model: 512
     nhead: 8
@@ -26,11 +29,13 @@ model:
     activation: "glu"
     num_layers: 6
     dropout_rate: 0.1
+  decoder:
+    vocab_size: -1
 training:
-    label_type: feat_phone
-    batch_frames: 12000
+    label_type: tokens
+    batch_frames: 30000
     multi_gpu: False
-    exp_dir: exp/conv_ctc
+    exp_dir: exp/ctc_ja
     print_inteval: 50
     num_epoch: 80
     accumulate_grad_batch: 8
@@ -38,8 +43,6 @@ training:
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    lambda_qua: 0.1
-    lambda_ctc: 1.0
     num_last_ckpt_keep: 10
     lr_scheduler:
         type: warmup_transformer
