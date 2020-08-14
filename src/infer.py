@@ -50,7 +50,7 @@ if __name__ == "__main__":
     timer.tic()
     args = get_args()
 
-    tokenizer = data.CharTokenizer(args.vocab_file, add_blk=args.add_blk)
+    tokenizer = data.CharTokenizer(args.vocab_path, add_blk=args.add_blk)
 
     if args.config:
         import yaml
