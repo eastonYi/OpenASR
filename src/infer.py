@@ -30,7 +30,7 @@ def get_args():
      Usage: feedforward.py <model_pkg> <wav_scp> <output_path>""")
     parser.add_argument("--model_type", help="path to model package.")
     parser.add_argument("--model_pkg", help="path to model package.")
-    parser.add_argument("--vocab_file", help="path to vocabulary file.")
+    parser.add_argument("--vocab_path", help="path to vocabulary file.")
     parser.add_argument("--json_file", help="data directory")
     parser.add_argument("--output", help="output")
     parser.add_argument("--batch_frames", type=int, default=20, help="batch_size")

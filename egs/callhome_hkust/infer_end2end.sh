@@ -12,7 +12,7 @@ python -W ignore::UserWarning $SRC_ROOT/infer.py \
     --batch_frames 20000 \
     --nbest 5 \
     --label_type tokens \
-    --vocab_char data/vocab_ja.char \
+    --vocab_path data/vocab_ja.char \
     --model_type $model_type \
     --model_pkg $expdir/avg10.pt \
     --add_blk False \
