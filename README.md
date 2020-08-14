@@ -5,6 +5,8 @@ A pytorch based end2end speech recognition system. The main architecture is [Spe
 [中文说明](https://github.com/by2101/OpenASR/blob/master/README_zh.md)
 
 ## Results
+
+### aishell1
 Conv-Transformer
 ref len 104765
 sub 6.02
@@ -16,6 +18,14 @@ wer 6.44
 | :---: | :-: | :----: |:----: |:----: |:----: | :----: |
 | Conv-Transformer | 7176 | 104765 | 6.02  |  0.24 |  0.17  | 6.44 |
 
+
+### hkust
+ref len 55894
+sub 19.41
+del 3.05
+ins 3.90
+wer 26.35
+wer 26.35
 
 ## Features
 

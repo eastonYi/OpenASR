@@ -98,15 +98,18 @@ if __name__ == "__main__":
         blank_index = tokenizer.unit_num() - 1
         if args.nbest == 1:
             from third_party.ctc_infer import GreedyDecoder
-            decode = GreedyDecoder(blank_index=blank_index)
+            decode_fn = GreedyDecoder(blank_index=blank_index)
         else:
-            from third_party.ctc_infer import BeamDecoder
-            decode = BeamDecoder(beam_width=args.nbest, blank_index=blank_index)
+            from ctcdecode import CTCBeamDecoder
+            decode_fn = CTCBeamDecoder(list(tokenizer.unit2id.items),
+                                     beam_width=args.nbest,
+                                     blank_id=blank_index,
+                                     num_processes=10)
 
         model = Model.create_model(pkg["model"]["splayer_config"],
                                    pkg["model"]["encoder_config"],
                                    pkg["model"]["vocab_size"])
-        model.decode = decode
+        model.decode_fn = decode_fn
 
     else:
         raise NotImplementedError('not found model_type!')
@@ -118,12 +121,12 @@ if __name__ == "__main__":
     model.eval()
 
     if args.offline:
-        test_set = data.SpeechDataset(args.json_file, rate_in_out=None)
+        test_set = data.SpeechDataset(args.json_file)
         collate = data.WaveCollate(tokenizer, 60)
         validsampler = data.TimeBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
     else:
-        test_set = data.ArkDataset(args.json_file, rate_in_out=None)
-        collate = data.FeatureCollate(tokenizer, 60, args.add_blk, label_type=args.label_type)
+        test_set = data.ArkDataset(args.json_file)
+        collate = data.FeatureCollate(tokenizer, args.add_blk, label_type=args.label_type)
         validsampler = data.FrameBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
 
     test_loader = torch.utils.data.DataLoader(test_set,
@@ -142,9 +145,10 @@ if __name__ == "__main__":
             if args.model_type.lower() == 'conv_ctc':
                 logits, len_logits = model.get_logits(padded_waveforms, wave_lengths)
                 pred_ids, len_decodeds, scores = model.batch_beam_decode(
-                    logits, len_logits, model.decode,
+                    logits, len_logits, model.decode_fn,
                     vocab_size=tokenizer.unit_num(),
                     beam_size=args.nbest, max_decode_len=args.maxlen)
+                import pdb; pdb.set_trace()
             else:
                 encoded, len_encoded = model.get_encoded(padded_waveforms, wave_lengths)
                 pred_ids, len_decodeds, scores = model.batch_beam_decode(

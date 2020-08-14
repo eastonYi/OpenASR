@@ -304,9 +304,8 @@ class WaveCollate(object):
 
 
 class FeatureCollate(object):
-    def __init__(self, tokenizer, maxlen=999, add_eos=False, label_type='tokens'):
+    def __init__(self, tokenizer, add_eos=False, label_type='tokens'):
         self.tokenizer = tokenizer
-        self.maxlen = maxlen
         self.add_eos = add_eos
         self.label_type = label_type
 
