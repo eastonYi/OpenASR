@@ -2,12 +2,12 @@
 data:
   trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train/ja_train.json
   devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
-  vocab_char: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ja.char
+  vocab_path: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ja.char
   fetchworker_num: 4
   feat_range: 1,1000
   label_range: 0,50
 model:
-  type: Conv_Transformer
+  type: conv-transformer
   add_eos: True
   add_blk: False
   signal:
