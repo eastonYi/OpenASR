@@ -16,7 +16,7 @@ import torch
 import third_party.kaldi_io as kio
 
 import utils
-from .datasets import ArkDataset
+from dataload.datasets import ArkDataset
 
 IGNORE_ID = -1
 

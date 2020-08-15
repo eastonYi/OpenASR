@@ -79,10 +79,10 @@ if __name__ == "__main__":
         trainingsampler = samplers.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
         validsampler = samplers.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
 
-    tr_loader = DataLoader(training_set,
-        collate_fn=collate, batch_sampler=trainingsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
-    cv_loader = DataLoader(valid_set,
-        collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
+    tr_loader = DataLoader(training_set,collate_fn=collate, batch_sampler=trainingsampler,
+                           shuffle=False, num_workers=dataconfig["fetchworker_num"])
+    cv_loader = DataLoader(valid_set, collate_fn=collate, batch_sampler=validsampler,
+                           shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
     if modelconfig['type'] == 'conv-transformer':
         from frameworks.Speech_Models import Conv_Transformer as Model
