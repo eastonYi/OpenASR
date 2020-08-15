@@ -18,8 +18,10 @@ import argparse
 import logging
 import yaml
 import torch
+from torch.utils.data import DataLoader
+
 import utils
-import data
+from dataload import datasets, collates, samplers, data_utils
 
 
 if "LAS_LOG_LEVEL" in os.environ:
@@ -62,24 +64,24 @@ if __name__ == "__main__":
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
 
-    tokenizer = data.CharTokenizer(dataconfig["vocab_path"], add_blk=modelconfig['add_blk'])
+    tokenizer = data_utils.CharTokenizer(dataconfig["vocab_path"], add_blk=modelconfig['add_blk'])
     modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
     if modelconfig['signal']["feature_type"] == 'offline':
-        training_set = data.ArkDataset(dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
-        valid_set = data.ArkDataset(dataconfig["devset"], reverse=True)
-        collate = data.FeatureCollate(tokenizer, modelconfig["add_eos"], trainingconfig["label_type"])
-        trainingsampler = data.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
-        validsampler = data.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
+        training_set = datasets.ArkDataset(dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
+        valid_set = datasets.ArkDataset(dataconfig["devset"], reverse=True)
+        collate = collates.FeatureCollate(tokenizer, modelconfig["add_eos"], trainingconfig["label_type"])
+        trainingsampler = samplers.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
+        validsampler = samplers.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
     else:
-        training_set = data.SpeechDataset(dataconfig["trainset"])
-        valid_set = data.SpeechDataset(dataconfig["devset"], reverse=True)
-        collate = data.WaveCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"])
-        trainingsampler = data.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
-        validsampler = data.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
+        training_set = datasets.SpeechDataset(dataconfig["trainset"])
+        valid_set = datasets.SpeechDataset(dataconfig["devset"], reverse=True)
+        collate = collates.WaveCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"])
+        trainingsampler = samplers.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
+        validsampler = samplers.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
 
-    tr_loader = torch.utils.data.DataLoader(training_set,
+    tr_loader = DataLoader(training_set,
         collate_fn=collate, batch_sampler=trainingsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
-    cv_loader = torch.utils.data.DataLoader(valid_set,
+    cv_loader = DataLoader(valid_set,
         collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
     if modelconfig['type'] == 'conv-transformer':

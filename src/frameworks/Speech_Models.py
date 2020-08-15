@@ -25,6 +25,7 @@ inf = 1e10
 SOS_ID = 1
 EOS_ID = 2
 
+
 class Conv_Transformer(torch.nn.Module):
     def __init__(self, splayer, encoder, decoder):
         super().__init__()

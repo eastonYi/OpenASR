@@ -3,8 +3,10 @@ data:
   trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust/data/hkust_dev-small.json
   devset: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust/data/hkust_dev-small.json
   vocab_path: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust/data/vocab.char
-  maxlen: 200
+  feat_range: 1,1000
+  label_range: 0,50
   fetchworker_num: 1
+
 model:
   type: Conv_CTC
   add_eos: False
