@@ -170,6 +170,31 @@ class Conv_Transformer(torch.nn.Module):
         self.encoder.load_state_dict(pkg["encoder_state"])
         self.decoder.load_state_dict(pkg["decoder_state"])
 
+    def restore_without_fc(self, pkg):
+        # check config
+        logging.info("Restore model states...")
+        for key in self.splayer.config.keys():
+            if key == "spec_aug":
+                continue
+            if self.splayer.config[key] != pkg["splayer_config"][key]:
+                raise ValueError("splayer_config mismatch.")
+        for key in self.encoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.encoder.config[key] != pkg["encoder_config"][key]):
+                raise ValueError("encoder_config mismatch.")
+        for key in self.decoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.decoder.config[key] != pkg["decoder_config"][key]):
+                print("decoder_config mismatch.")
+
+        self.splayer.load_state_dict(pkg["splayer_state"])
+        self.encoder.load_state_dict(pkg["encoder_state"])
+        dict_without_fc = {k:v for k, v in pkg["decoder_state"] if k in
+                           ('output_affine.weight',
+                            'output_affine.bias',
+                            'emb.weight')}
+        self.decoder.load_state_dict(dict_without_fc)
+
     def _reset_parameters(self):
         for p in self.parameters():
             if p.dim() > 1:

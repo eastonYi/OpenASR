@@ -117,10 +117,15 @@ if __name__ == "__main__":
 
     logging.info("\nModel info:\n{}".format(model))
 
-    if args.continue_training:
+    if args.continue:
         logging.info("Load package from {}.".format(os.path.join(trainingconfig["exp_dir"], "last.pt")))
         pkg = torch.load(os.path.join(trainingconfig["exp_dir"], "last.pt"))
         model.restore(pkg["model"])
+    elif args.load_pretrained_model:
+        logging.info("Load package from {}.".format(args.pretrained_model))
+        pkg = torch.load(args.pretrained_model)
+        model.restore_without_fc(pkg["model"])
+        trainingconfig['init_lr'] *= 0.1
 
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         logging.info("Let's use {} GPUs!".format(torch.cuda.device_count()))

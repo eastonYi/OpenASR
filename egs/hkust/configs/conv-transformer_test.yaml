@@ -1,8 +1,9 @@
-# continue_training:
+continue_training:
 data:
-  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train/ja_train.json
-  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
-  vocab_path: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ja.char
+  trainset: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust/data/hkust_dev-small.json
+  devset: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust/data/hkust_dev-small.json
+  # vocab_path: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust/data/vocab.char
+  vocab_path: /Users/easton/Projects/OpenASR_BaiYe/egs/hkust/data/vocab_small.char
   fetchworker_num: 4
   feat_range: 1,1000
   label_range: 0,50
@@ -24,36 +25,35 @@ model:
       layer_num: 2
     input_dim: 80
     d_model: 512
-    nhead: 8
+    nhead: 4
     dim_feedforward: 2048
     activation: "glu"
-    num_layers: 6
+    num_layers: 1
     dropout_rate: 0.1
   decoder:
     type: TransformerDecoder
     vocab_size: -1 # derived by tokenizer
     d_model: 512
-    nhead: 8
-    num_layers: 6
+    nhead: 4
+    num_layers: 1
     encoder_dim: 512
     dim_feedforward: 2048
     activation: "glu"
     dropout_rate: 0.1
 training:
     label_type: tokens
-    batch_frames: 20000
+    batch_frames: 1000
     multi_gpu: False
-    exp_dir: exp/conv-transformer_ja
-    print_inteval: 50
+    exp_dir: exp/conv-transformer
+    print_inteval: 200
     num_epoch: 80
     accumulate_grad_batch: 8
-    init_lr: 0.1
+    init_lr: 1.0
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    num_last_ckpt_keep: 10
+    num_last_ckpt_keep: 1
     lr_scheduler:
         type: warmup_transformer
         warmup_step: 10000
         d_model: 512
-    load_pretrained_model: /home/easton/projects/OpenASR/egs/hkust/exp/conv-transformer/avg10.pt
