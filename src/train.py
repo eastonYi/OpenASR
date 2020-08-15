@@ -117,13 +117,13 @@ if __name__ == "__main__":
 
     logging.info("\nModel info:\n{}".format(model))
 
-    if args.continue:
+    if args.continue_training:
         logging.info("Load package from {}.".format(os.path.join(trainingconfig["exp_dir"], "last.pt")))
         pkg = torch.load(os.path.join(trainingconfig["exp_dir"], "last.pt"))
         model.restore(pkg["model"])
-    elif args.load_pretrained_model:
-        logging.info("Load package from {}.".format(args.pretrained_model))
-        pkg = torch.load(args.pretrained_model)
+    elif trainingconfig['pretrained_model']:
+        logging.info("Load package from {}.".format(trainingconfig['pretrained_model']))
+        pkg = torch.load(trainingconfig['pretrained_model'])
         model.restore_without_fc(pkg["model"])
         trainingconfig['init_lr'] *= 0.1
 

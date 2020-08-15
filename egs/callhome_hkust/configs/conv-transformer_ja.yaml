@@ -56,4 +56,4 @@ training:
         type: warmup_transformer
         warmup_step: 10000
         d_model: 512
-    load_pretrained_model: /home/easton/projects/OpenASR/egs/hkust/exp/conv-transformer/avg10.pt
+    pretrained_model: /home/easton/projects/OpenASR/egs/hkust/exp/conv-transformer/avg10.pt
