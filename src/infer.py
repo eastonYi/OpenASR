@@ -17,9 +17,10 @@ import sys
 import argparse
 import logging
 import torch
+from torch.utils.data import DataLoader
 
 import utils
-import data
+from dataload import datasets, collates, samplers, data_utils
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     timer.tic()
     args = get_args()
 
-    tokenizer = data.CharTokenizer(args.vocab_path, add_blk=args.add_blk)
+    tokenizer = data_utils.CharTokenizer(args.vocab_path, add_blk=args.add_blk)
 
     if args.config:
         import yaml
@@ -119,15 +120,15 @@ if __name__ == "__main__":
     model.eval()
 
     if args.offline:
-        test_set = data.SpeechDataset(args.json_file)
-        collate = data.WaveCollate(tokenizer, 60)
-        validsampler = data.TimeBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
+        test_set = datasets.SpeechDataset(args.json_file)
+        collate = collates.WaveCollate(tokenizer, 60)
+        validsampler = samplers.TimeBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
     else:
-        test_set = data.ArkDataset(args.json_file)
-        collate = data.FeatureCollate(tokenizer, args.add_blk, label_type=args.label_type)
-        validsampler = data.FrameBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
+        test_set = datasets.ArkDataset(args.json_file)
+        collate = collates.FeatureCollate(tokenizer, args.add_blk, label_type=args.label_type)
+        validsampler = samplers.FrameBasedSampler(test_set, args.batch_frames, 1, shuffle=False)
 
-    test_loader = torch.utils.data.DataLoader(test_set,
+    test_loader = DataLoader(test_set,
         collate_fn=collate, batch_sampler=validsampler, shuffle=False, num_workers=1)
     logging.info("Start feedforward...")
 

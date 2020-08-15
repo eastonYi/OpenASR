@@ -17,9 +17,10 @@ import sys
 import argparse
 import logging
 import torch
+from torch.utils.data import DataLoader
 
 import utils
-import data
+from dataload import datasets, collates, samplers, data_utils
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -61,15 +62,15 @@ if __name__ == "__main__":
 
     # logging.info("\nModel info:\n{}".format(model))
 
-    tokenizer_phone = data.CharTokenizer(args.vocab_phone, add_blk=True)
-    tokenizer_char = data.CharTokenizer(args.vocab_char, add_blk=args.add_blk)
-    test_set = data.ArkDataset(args.json_file, rate_in_out=None)
+    tokenizer_phone = data_utils.CharTokenizer(args.vocab_phone, add_blk=True)
+    tokenizer_char = data_utils.CharTokenizer(args.vocab_char, add_blk=args.add_blk)
+    test_set = datasets.ArkDataset(args.json_file, rate_in_out=None)
 
     if args.model_type.lower() == 'embed_decoder':
         from frameworks.Text_Models import Embed_Decoder as Model
 
-        collate = data.Phone_Char_Collate(tokenizer_phone, tokenizer_char, args.add_eos)
-        test_loader = torch.utils.data.DataLoader(test_set,
+        collate = collates.Phone_Char_Collate(tokenizer_phone, tokenizer_char, args.add_eos)
+        test_loader = DataLoader(test_set,
             collate_fn=collate, batch_size=args.batch_size, num_workers=1)
 
         model = Model.create_model(pkg["model"]["decoder"])
@@ -77,9 +78,9 @@ if __name__ == "__main__":
     elif args.model_type.lower() == 'cif_mix':
         from frameworks.Speech_Models import CIF_MIX as Model
 
-        collate = data.Feat_Phone_Char_Collate(tokenizer_phone, tokenizer_char, args.add_eos)
-        sampler = data.FrameBasedSampler(test_set, args.batch_frames, 1, shuffle=True)
-        test_loader = torch.utils.data.DataLoader(test_set,
+        collate = collates.Feat_Phone_Char_Collate(tokenizer_phone, tokenizer_char, args.add_eos)
+        sampler = samplers.FrameBasedSampler(test_set, args.batch_frames, 1, shuffle=True)
+        test_loader = DataLoader(test_set,
             collate_fn=collate, batch_sampler=sampler, shuffle=False, num_workers=2)
 
         model = Model.create_model(pkg["model"]["splayer_config"],
