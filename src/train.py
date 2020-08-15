@@ -124,7 +124,7 @@ if __name__ == "__main__":
     elif trainingconfig['pretrained_model']:
         logging.info("Load package from {}.".format(trainingconfig['pretrained_model']))
         pkg = torch.load(trainingconfig['pretrained_model'])
-        model.restore_without_fc(pkg["model"])
+        model.restore(pkg["model"], without_fc=True)
         trainingconfig['init_lr'] *= 0.1
 
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
