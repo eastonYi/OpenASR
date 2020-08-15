@@ -26,6 +26,88 @@ SOS_ID = 1
 EOS_ID = 2
 
 
+class Conv_CTC(torch.nn.Module):
+    def __init__(self, splayer, encoder, vocab_size):
+        super().__init__()
+        self.splayer = splayer
+        self.encoder = encoder
+        self.vocab_size = vocab_size
+        self.fc = nn.Linear(encoder.d_model, vocab_size, bias=False)
+        self._reset_parameters()
+
+    def forward(self, batch_wave, lengths, targets, target_lengths):
+        logits, len_logits = self.get_logits(batch_wave, lengths)
+        loss = cal_ctc_loss(logits, len_logits, targets, target_lengths)
+
+        return loss
+
+    def get_logits(self, feats, len_feats):
+        encoded, len_encoded = self.get_encoded(feats, len_feats)
+        outputs = self.fc(encoded)
+
+        return outputs, len_encoded
+
+    def get_encoded(self, feats, len_feats):
+        encoded, len_encoded = self.splayer(feats, len_feats)
+        encoded, len_encoded = self.encoder(encoded, len_encoded)
+
+        return encoded, len_encoded
+
+    @staticmethod
+    def batch_beam_decode(logits, len_logits, decode_fn, vocab_size, beam_size, max_decode_len):
+
+        prob = torch.softmax(logits, -1)
+        beam_results, beam_scores, timesteps, out_seq_len = decode_fn.decode(prob)
+
+        return beam_results, out_seq_len, beam_scores
+
+    @classmethod
+    def create_model(cls, sp_config, en_config, vocab_size):
+        from blocks.sp_layers import SPLayer
+        from blocks.encoders import TransformerEncoder
+
+        splayer = SPLayer(sp_config)
+        encoder = TransformerEncoder(en_config)
+
+        model = cls(splayer, encoder, vocab_size)
+
+        return model
+
+    def package(self):
+        pkg = {
+            "splayer_config": self.splayer.config,
+            "splayer_state": self.splayer.state_dict(),
+            "encoder_config": self.encoder.config,
+            "encoder_state": self.encoder.state_dict(),
+            "vocab_size": self.vocab_size,
+            "fc_state": self.fc.state_dict(),
+             }
+        return pkg
+
+    def restore(self, pkg, withput_fc=False):
+        # check config
+        logging.info("Restore model states...")
+        for key in self.splayer.config.keys():
+            if key == "spec_aug":
+                continue
+            if self.splayer.config[key] != pkg["splayer_config"][key]:
+                raise ValueError("splayer_config mismatch.")
+        for key in self.encoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.encoder.config[key] != pkg["encoder_config"][key]):
+                raise ValueError("encoder_config mismatch.")
+
+        self.splayer.load_state_dict(pkg["splayer_state"])
+        self.encoder.load_state_dict(pkg["encoder_state"])
+        if not withput_fc:
+            self.fc.load_state_dict(pkg["fc_state"])
+
+    def _reset_parameters(self):
+        for p in self.parameters():
+            if p.dim() > 1:
+                xavier_uniform_(p)
+
+
 class Conv_Transformer(torch.nn.Module):
     def __init__(self, splayer, encoder, decoder):
         super().__init__()
@@ -678,84 +760,3 @@ class CIF_MIX(CIF_FC):
         self.decoder.load_state_dict(pkg["decoder_state"])
         self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
         self.phone_fc.load_state_dict(pkg["phone_fc_state"])
-
-
-class Conv_CTC(torch.nn.Module):
-    def __init__(self, splayer, encoder, vocab_size):
-        super().__init__()
-        self.splayer = splayer
-        self.encoder = encoder
-        self.vocab_size = vocab_size
-        self.fc = nn.Linear(encoder.d_model, vocab_size, bias=False)
-        self._reset_parameters()
-
-    def forward(self, batch_wave, lengths, targets, target_lengths):
-        logits, len_logits = self.get_logits(batch_wave, lengths)
-        loss = cal_ctc_loss(logits, len_logits, targets, target_lengths)
-
-        return loss
-
-    def get_logits(self, feats, len_feats):
-        encoded, len_encoded = self.get_encoded(feats, len_feats)
-        outputs = self.fc(encoded)
-
-        return outputs, len_encoded
-
-    def get_encoded(self, feats, len_feats):
-        encoded, len_encoded = self.splayer(feats, len_feats)
-        encoded, len_encoded = self.encoder(encoded, len_encoded)
-
-        return encoded, len_encoded
-
-    @staticmethod
-    def batch_beam_decode(logits, len_logits, decode_fn, vocab_size, beam_size, max_decode_len):
-
-        prob = torch.softmax(logits, -1)
-        beam_results, beam_scores, timesteps, out_seq_len = decode_fn.decode(prob)
-
-        return beam_results, out_seq_len, beam_scores
-
-    @classmethod
-    def create_model(cls, sp_config, en_config, vocab_size):
-        from blocks.sp_layers import SPLayer
-        from blocks.encoders import TransformerEncoder
-
-        splayer = SPLayer(sp_config)
-        encoder = TransformerEncoder(en_config)
-
-        model = cls(splayer, encoder, vocab_size)
-
-        return model
-
-    def package(self):
-        pkg = {
-            "splayer_config": self.splayer.config,
-            "splayer_state": self.splayer.state_dict(),
-            "encoder_config": self.encoder.config,
-            "encoder_state": self.encoder.state_dict(),
-            "vocab_size": self.vocab_size,
-            "fc_state": self.fc.state_dict(),
-             }
-        return pkg
-
-    def restore(self, pkg):
-        # check config
-        logging.info("Restore model states...")
-        for key in self.splayer.config.keys():
-            if key == "spec_aug":
-                continue
-            if self.splayer.config[key] != pkg["splayer_config"][key]:
-                raise ValueError("splayer_config mismatch.")
-        for key in self.encoder.config.keys():
-            if (key != "dropout_rate" and
-                    self.encoder.config[key] != pkg["encoder_config"][key]):
-                raise ValueError("encoder_config mismatch.")
-
-        self.splayer.load_state_dict(pkg["splayer_state"])
-        self.encoder.load_state_dict(pkg["encoder_state"])
-        self.fc.load_state_dict(pkg["fc_state"])
-
-    def _reset_parameters(self):
-        for p in self.parameters():
-            if p.dim() > 1:
-                xavier_uniform_(p)

@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
     tokenizer_phone = data_utils.CharTokenizer(args.vocab_phone, add_blk=True)
     tokenizer_char = data_utils.CharTokenizer(args.vocab_char, add_blk=args.add_blk)
-    test_set = datasets.ArkDataset(args.json_file, rate_in_out=None)
+    test_set = datasets.ArkDataset(args.json_file)
 
     if args.model_type.lower() == 'embed_decoder':
         from frameworks.Text_Models import Embed_Decoder as Model
@@ -86,9 +86,10 @@ if __name__ == "__main__":
         model = Model.create_model(pkg["model"]["splayer_config"],
                                    pkg["model"]["encoder_config"],
                                    pkg["model"]["assigner_config"],
+                                   tokenizer_phone.unit_num(),
                                    pkg["model"]["decoder_config"])
     else:
-        raise NotImplementedError('not found model_type!')
+        raise NotImplementedError('not found model_type: {}'.format(args.model_type))
 
     model.restore(pkg["model"])
     if args.use_gpu:
