@@ -10,7 +10,7 @@ mkdir -p $decode_dir
 
 CUDA_VISIBLE_DEVICES=$gpu \
 python -W ignore::UserWarning $SRC_ROOT/infer_phone2char.py \
-    --batch_frames 50000 \
+    --batch_frames 20000 \
     --nbest 5 \
     --label_type feat_phone_char \
     --vocab_char data/vocab_ja.char \
