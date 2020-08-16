@@ -84,7 +84,7 @@ class Conv_CTC(torch.nn.Module):
              }
         return pkg
 
-    def restore(self, pkg, withput_fc=False):
+    def restore(self, pkg, without_fc=False):
         # check config
         logging.info("Restore model states...")
         for key in self.splayer.config.keys():
@@ -99,7 +99,7 @@ class Conv_CTC(torch.nn.Module):
 
         self.splayer.load_state_dict(pkg["splayer_state"])
         self.encoder.load_state_dict(pkg["encoder_state"])
-        if not withput_fc:
+        if not without_fc:
             self.fc.load_state_dict(pkg["fc_state"])
 
     def _reset_parameters(self):

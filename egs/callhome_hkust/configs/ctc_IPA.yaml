@@ -1,9 +1,9 @@
 # continue_training:
 data:
-  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train/ja_train.json
+  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train
   devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
-  vocab_path: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ja.char
-  fetchworker_num: 2
+  vocab_path: /home/easton/projects/OpenASR/egs/callhome_hkust/data/callhome.IPA
+  fetchworker_num: 4
   feat_range: 1,1000
   label_range: 0,50
 model:
@@ -21,7 +21,7 @@ model:
     type: Transformer
     sub:
       type: ConvV2
-      layer_num: 2
+      layer_num: 1
     input_dim: 80
     d_model: 512
     nhead: 8
@@ -32,10 +32,10 @@ model:
   decoder:
     vocab_size: -1
 training:
-    label_type: tokens
+    label_type: phones
     batch_frames: 50000
     multi_gpu: False
-    exp_dir: exp/ctc_ja
+    exp_dir: exp/ctc_IPA
     print_inteval: 10
     num_epoch: 80
     accumulate_grad_batch: 8
@@ -48,4 +48,4 @@ training:
         type: warmup_transformer
         warmup_step: 10000
         d_model: 512
-    pretrained_model: /home/easton/projects/OpenASR/egs/hkust/exp/ctc/avg10.pt
+    pretrained_model:

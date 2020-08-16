@@ -16,6 +16,6 @@ python -W ignore::UserWarning $SRC_ROOT/infer.py \
     --model_type $model_type \
     --model_pkg $expdir/avg10.pt \
     --add_blk False \
-    --json_file /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json \
+    --json_file /data3/easton/data/CALLHOME_Multilingual/jsons/test/ja_test.json \
     --output $decode_dir/hyp.txt \
     --use_gpu True
