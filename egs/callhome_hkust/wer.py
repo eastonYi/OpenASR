@@ -255,7 +255,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--hyp', type=str, default=None)
     parser.add_argument('--ref', type=str, default=None)
+    parser.add_argument('--cn', type=bool, default=True)
 
     args = parser.parse_args()
 
-    get_wer(args.hyp, args.ref, iscn=True, idxfile=None, printsen=True)
+    get_wer(args.hyp, args.ref, iscn=args.cn, idxfile=None, printsen=True)

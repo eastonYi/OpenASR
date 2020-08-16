@@ -41,6 +41,7 @@ def get_args():
     parser.add_argument("--label_type", type=str, default='tokens', help="config")
     parser.add_argument("--offline", type=utils.str2bool, default=False, help=".")
     parser.add_argument("--add_blk", type=utils.str2bool, default=False, help=".")
+    parser.add_argument("--split_token", type=utils.str2bool, default=False, help=".")
     parser.add_argument("--use_gpu", type=utils.str2bool, default=False, help="whether to use gpu.")
     args = parser.parse_args()
     return args
@@ -161,7 +162,7 @@ if __name__ == "__main__":
             utt = utts[i]
             msg = "Results for {}:\n".format(utt)
             for j, (pred_id, len_decoded, score) in enumerate(zip(n_pred_ids, n_len_decodeds, n_scores)):
-                hyp = tokenizer.decode(pred_id[:len_decoded], split_token=False)
+                hyp = tokenizer.decode(pred_id[:len_decoded], split_token=args.split_token)
                 msg += "top{}: {} score: {:.10f}\n".format(j+1, hyp, score)
                 if j == 0:
                     fd.write("{} {}\n".format(utt, hyp))
