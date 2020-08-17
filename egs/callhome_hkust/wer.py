@@ -110,7 +110,7 @@ def distance(ref, hyp):
     alignment.reverse()
     return (total_error, crt, sub, det, ins, alignment)
 
-def read_sentences(filename, iscn=False):
+def read_sentences(filename, iscn=False, ignore_list=None):
     map = {}
     tmpdata = [x.split() for x in open(filename).readlines()]
     data = []
@@ -155,8 +155,11 @@ def read_sentences(filename, iscn=False):
                 tmp = re.sub(r'<[\d\.s]+>\s*\.', '', tmp)
                 tmp = re.sub(r'<\w+>\s+', '', tmp)
                 tmp = re.sub(r'\s', '', tmp)
+
+                for ignore in ignore_list:
+                    tmp = re.sub(ignore, '', tmp)
             else:
-                tmp = [x.lower() for x in tmp]
+                tmp = [x.lower() for x in tmp if x not in ignore_list]
             map[index] = tmp
     #print 1984
     return map
@@ -173,7 +176,7 @@ def usage():
     ''')
 
 
-def get_wer(hypfile, reffile, iscn=False, idxfile=None, printsen=False):
+def get_wer(hypfile, reffile, iscn=False, idxfile=None, printsen=False, ignore_list=None):
     """
     Calculate word/character error rate
 
@@ -191,8 +194,8 @@ def get_wer(hypfile, reffile, iscn=False, idxfile=None, printsen=False):
         usage()
         sys.exit(-1)
 
-    ref = read_sentences(reffile, iscn)
-    hyp = read_sentences(hypfile, iscn)
+    ref = read_sentences(reffile, iscn, ignore_list)
+    hyp = read_sentences(hypfile, iscn, ignore_list)
 
     total_ref_len = 0
     total_sub = 0
@@ -255,8 +258,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--hyp', type=str, default=None)
     parser.add_argument('--ref', type=str, default=None)
-    parser.add_argument('--cn', type=bool, default=True)
+    parser.add_argument('--is_cn', type=bool, default=True)
+    parser.add_argument('--ignore', type=str, default='SPN,SIL,NSN,LAU,<unk>')
 
     args = parser.parse_args()
 
-    get_wer(args.hyp, args.ref, iscn=args.cn, idxfile=None, printsen=True)
+    ignore_list = args.ignore.split(',')
+    get_wer(args.hyp, args.ref, iscn=args.is_cn, idxfile=None, printsen=True, ignore_list=ignore_list)
