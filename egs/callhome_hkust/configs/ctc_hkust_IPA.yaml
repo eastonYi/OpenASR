@@ -33,7 +33,7 @@ model:
     vocab_size: -1
 training:
     label_type: phones
-    batch_frames: 50000
+    batch_frames: 20000
     multi_gpu: False
     exp_dir: exp/ctc_hkust_IPA
     print_inteval: 10

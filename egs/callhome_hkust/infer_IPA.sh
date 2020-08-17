@@ -15,7 +15,7 @@ python -W ignore::UserWarning $SRC_ROOT/infer.py \
     --vocab_path data/callhome.IPA \
     --model_type $model_type \
     --model_pkg $expdir/avg10.pt \
-    --add_blk False \
+    --add_blk True \
     --split_token True \
     --json_file /data3/easton/data/CALLHOME_Multilingual/jsons/test/ja_test.json \
     --output $decode_dir/hyp.IPA \
