@@ -63,14 +63,39 @@ if __name__ == "__main__":
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
 
+    tokenizer_phone = data_utils.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
+    tokenizer_char = data_utils.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
+
+    # model type
     if modelconfig['type'] == 'Embed_Decoder':
         from frameworks.Text_Models import Embed_Decoder as Model
-        from solvers import Phone2Char_Solver as Solver
 
-        tokenizer_phone = data_utils.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
-        tokenizer_char = data_utils.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
         modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
         modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
+        model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
+
+    elif modelconfig['type'] == 'Conv_CTC_Transformer':
+        from frameworks.Speech_Models import Conv_CTC as Model
+
+        modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
+        model = Model.create_model(modelconfig["signal"],
+                                   modelconfig["encoder"],
+                                   tokenizer_phone.unit_num(),
+                                   modelconfig["decoder"])
+
+    elif modelconfig['type'] == 'CIF_MIX':
+        from frameworks.Speech_Models import CIF_MIX as Model
+
+        modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
+        model = Model.create_model(modelconfig["signal"],
+                                   modelconfig["encoder"],
+                                   modelconfig["assigner"],
+                                   tokenizer_phone.unit_num(),
+                                   modelconfig["decoder"])
+
+    # solver type
+    if trainingconfig['type'] == 'phone2char':
+        from solvers import Phone2Char_Solver as Solver
 
         acoustic_set = datasets.ArkDataset(dataconfig["acoustic"], feat_range=feat_range, label_range=label_range)
         training_set = datasets.ArkDataset(dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
@@ -82,73 +107,10 @@ if __name__ == "__main__":
         cv_loader = DataLoader(valid_set,
             collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=1)
 
-        model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
         solver = Solver(model, trainingconfig, tr_loader, cv_loader)
 
-    elif modelconfig['type'] == 'Conv_CTC':
-        from frameworks.Speech_Models import Conv_CTC as Model
-        from solvers import CTC_Solver as Solver
-
-        tokenizer_phone = data_utils.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
-
-        training_set = datasets.ArkDataset(
-            dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
-        valid_set = datasets.ArkDataset(
-            dataconfig["devset"], reverse=True)
-
-        collate = collates.Feat_Phone_Collate(tokenizer_phone)
-        sampler_train = samplers.FrameBasedSampler(
-            training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
-        sampler_dev = samplers.FrameBasedSampler(
-            valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
-        batchiter_train = DataLoader(
-            training_set, collate_fn=collate, batch_sampler=sampler_train,
-            shuffle=False, num_workers=dataconfig["fetchworker_num"])
-        batchiter_dev = DataLoader(
-            valid_set, collate_fn=collate, batch_sampler=sampler_dev,
-            shuffle=False, num_workers=2)
-
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   vocab_size=tokenizer_phone.unit_num())
-        solver = Solver(model, trainingconfig, batchiter_train, batchiter_dev)
-
-    elif modelconfig['type'] == 'CIF_FC':
-        from frameworks.Speech_Models import CIF_FC as Model
-        from solvers import CIF_FC_Solver as Solver
-
-        tokenizer_phone = data_utils.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
-
-        training_set = datasets.ArkDataset(
-            dataconfig["trainset"], rate_in_out=None, feat_range=feat_range, label_range=label_range)
-        valid_set = datasets.ArkDataset(
-            dataconfig["devset"], reverse=True)
-
-        collate = collates.Feat_Phone_Collate(tokenizer_phone)
-        sampler_train = samplers.FrameBasedSampler(
-            training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
-        sampler_dev = samplers.FrameBasedSampler(
-            valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
-        batchiter_train = DataLoader(
-            training_set, collate_fn=collate, batch_sampler=sampler_train,
-            shuffle=False, num_workers=dataconfig["fetchworker_num"])
-        batchiter_dev = DataLoader(
-            valid_set, collate_fn=collate, batch_sampler=sampler_dev,
-            shuffle=False, num_workers=dataconfig["fetchworker_num"])
-
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   modelconfig["assigner"],
-                                   vocab_size=tokenizer_phone.unit_num())
-        solver = Solver(model, trainingconfig, batchiter_train, batchiter_dev)
-
-    elif modelconfig['type'] == 'CIF_MIX':
-        from frameworks.Speech_Models import CIF_MIX as Model
+    elif trainingconfig['type'] == 'mix':
         from solvers import CIF_MIX_Solver as Solver
-
-        tokenizer_phone = data_utils.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
-        tokenizer_char = data_utils.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
-        modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
 
         acoustic_set = datasets.ArkDataset(
             dataconfig["acoustic"], feat_range=feat_range, label_range=label_range)
@@ -177,11 +139,6 @@ if __name__ == "__main__":
             collate_fn=collate, batch_sampler=sampler_valid, shuffle=False,
             num_workers=dataconfig["fetchworker_num"])
 
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   modelconfig["assigner"],
-                                   tokenizer_phone.unit_num(),
-                                   modelconfig["decoder"])
         solver = Solver(model, trainingconfig, batchiter_acoustic, batchiter_train, batchiter_dev)
 
     logging.info("\nModel info:\n{}".format(model))
