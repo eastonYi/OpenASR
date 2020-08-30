@@ -1,0 +1,41 @@
+data:
+  # trainset: /data3/easton/data/Librispeech/LibriSpeech/train-clean-100.json
+  trainset: /data3/easton/data/Librispeech/LibriSpeech/dev-clean.json
+  devset: /data3/easton/data/Librispeech/LibriSpeech/test-clean.json
+  vocab_path: /home/easton/projects/OpenASR/egs/libri/data/subword_3727.vocab
+  fetchworker_num: 4
+  feat_range: 5000,400000
+  label_range: 1,100
+model:
+  type: gru_ctc
+  add_eos: False
+  add_blk: True
+  signal:
+    d_model: 512
+  encoder:
+    n_layers: 2
+    d_input: 4096
+    d_model: 512
+    dropout: 0.1
+  decoder:
+    vocab_size: -1 # derived by tokenizer
+training:
+    label_type: tokens
+    batch_time: 5000000
+    multi_gpu: False
+    exp_dir: exp/cpc-pretrain-960h_gru2-fintune-dev-clean
+    print_inteval: 10
+    num_epoch: 80
+    accumulate_grad_batch: 8
+    init_lr: 10.0
+    optimtype: adam
+    grad_max_norm: 50.
+    label_smooth: 0.1
+    num_last_ckpt_keep: 10
+    pretrained_model:
+    # load_splayer:
+    load_splayer: exp/cpc_pretrain_960h_new/last.pt
+    lr_scheduler:
+        type: warmup_transformer
+        warmup_step: 1000
+        d_model: 512

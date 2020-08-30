@@ -8,7 +8,8 @@ if __name__ == '__main__':
     parser.add_argument('--feat', type=str)
     parser.add_argument('--num_frames', type=str)
     parser.add_argument('--trans', type=str)
-    parser.add_argument('--phones', type=str)
+    parser.add_argument('--tokens', type=str)
+    parser.add_argument('--phones', type=str, default=None)
     parser.add_argument('--output', type=str)
     args = parser.parse_args()
 
@@ -33,14 +34,25 @@ if __name__ == '__main__':
             except:
                 pass
 
-    uttid2phones = {}
-    with open(args.phones) as f:
-        for line in f:
-            try:
-                uttid, phones = line.strip().split(maxsplit=1)
-                uttid2phones[uttid] = phones
-            except:
-                pass
+    if args.tokens:
+        uttid2tokens = {}
+        with open(args.tokens) as f:
+            for line in f:
+                try:
+                    uttid, tokens = line.strip().split(maxsplit=1)
+                    uttid2tokens[uttid] = tokens
+                except:
+                    pass
+
+    if args.phones:
+        uttid2phones = {}
+        with open(args.phones) as f:
+            for line in f:
+                try:
+                    uttid, phones = line.strip().split(maxsplit=1)
+                    uttid2phones[uttid] = phones
+                except:
+                    pass
 
     samples = []
     for i, uttid in enumerate(uttid2feat.keys()):
@@ -48,17 +60,24 @@ if __name__ == '__main__':
             sample = {}
             sample['uttid'] = uttid
             sample['feat'] = uttid2feat[uttid]
-            sample['tokens'] = uttid2trans[uttid]
-            sample['phones'] = uttid2phones[uttid]
             sample['feat_length'] = uttid2num_frames[uttid]
-            sample['phone_length'] = len(sample['phones'].split())
-            sample['token_length'] = len(sample['tokens'].split())
+            if args.tokens:
+                sample['tokens'] = uttid2tokens[uttid]
+                sample['token_length'] = len(sample['tokens'].split())
+            else:
+                sample['tokens'] = ' '.join(uttid2trans[uttid])
+                sample['token_length'] = len(sample['tokens'])
+            if args.phones:
+                sample['phones'] = uttid2phones[uttid]
+                sample['phone_length'] = len(sample['phones'].split())
+            sample['trans'] = uttid2trans[uttid]
+
         except:
             print('skip', uttid)
             continue
 
         samples.append(sample)
-    print('saved {}/{} samples'.format(len(samples), i))
+    print('saved {}/{} samples'.format(len(samples), i+1))
     jsonstring = json.dumps(samples, indent=2, ensure_ascii=False)
 
     with open(args.output, 'w') as fw:

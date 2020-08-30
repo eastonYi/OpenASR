@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import logging
-import numpy as np
 import torch
 import torch.nn as nn
 
@@ -23,7 +21,6 @@ from third_party import kaldi_signal as ksp
 
 
 class SPLayer(nn.Module):
-
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -102,3 +99,35 @@ class SPLayer(nn.Module):
             padded_features, feature_lengths = self.spec_aug(padded_features, feature_lengths)
 
         return padded_features, feature_lengths
+
+
+class WavConv(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+
+        self.d_model = config["d_model"]
+        self.encoder = nn.Sequential( # downsampling factor = 160
+            nn.Conv1d(1, self.d_model, kernel_size=10, stride=5, padding=3, bias=False),
+            nn.BatchNorm1d(self.d_model),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(self.d_model, self.d_model, kernel_size=8, stride=4, padding=2, bias=False),
+            nn.BatchNorm1d(self.d_model),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(self.d_model, self.d_model, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm1d(self.d_model),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(self.d_model, self.d_model, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm1d(self.d_model),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(self.d_model, self.d_model, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm1d(self.d_model),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, feats, feat_lengths):
+        len_x = feat_lengths // 160
+        x = self.encoder(feats.unsqueeze(1)).transpose(1, 2)
+        x = x[:, :len_x.max(), :]
+
+        return x, len_x

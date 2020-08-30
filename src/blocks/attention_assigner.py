@@ -1,8 +1,10 @@
 import torch.nn as nn
 import torch
+import torch.nn.functional as F
 
 from blocks.conv_layers import Conv1d, Conv2d
 from utils import sequence_mask
+from torch.nn.modules.normalization import LayerNorm
 
 
 class Attention_Assigner(nn.Module):
@@ -21,6 +23,7 @@ class Attention_Assigner(nn.Module):
         self.conv = Conv1d(self.d_input, self.d_model, self.n_layers, self.w_context,
                            pad='same', name='assigner')
         self.dropout = nn.Dropout(p=self.dropout_rate)
+        self.norm = LayerNorm(self.d_model)
         self.linear = nn.Linear(self.d_model, 1)
 
     def forward(self, padded_input, input_lengths):
@@ -34,6 +37,8 @@ class Attention_Assigner(nn.Module):
         """
         x, input_lengths = self.conv(padded_input, input_lengths)
         x = self.dropout(x)
+        # x = self.norm(x)
+        # x = F.relu(x)
         alphas = self.linear(x).squeeze(-1)
         alphas = torch.sigmoid(alphas)
         pad_mask = sequence_mask(input_lengths)

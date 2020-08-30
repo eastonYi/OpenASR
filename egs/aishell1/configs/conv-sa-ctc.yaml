@@ -7,9 +7,9 @@ data:
   feat_range: 1,1000
   label_range: 0,50
 model:
-  type: CIF
+  type: conv-ctc
   add_eos: False
-  add_blk: False
+  add_blk: True
   signal:
     feature_type: offline
     spec_aug:
@@ -28,36 +28,23 @@ model:
     activation: "glu"
     num_layers: 6
     dropout_rate: 0.1
-  assigner:
-    d_model: 512
-    n_layers: 1
-    w_context: 3
-    dropout: 0.1
   decoder:
     vocab_size: -1 # derived by tokenizer
-    d_model: 512
-    nhead: 8
-    num_layers: 6
-    encoder_dim: 512
-    dim_feedforward: 2048
-    activation: "glu"
-    dropout_rate: 0.1
 training:
     label_type: tokens
     batch_frames: 45000
     multi_gpu: False
-    exp_dir: exp/cif_2
-    print_inteval: 50
+    exp_dir: exp/conv-CTC
+    print_inteval: 100
     num_epoch: 80
     accumulate_grad_batch: 8
     init_lr: 1.0
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1
-    lambda_qua: 1.0
     num_last_ckpt_keep: 10
     pretrained_model:
     lr_scheduler:
-        type: "warmup_transformer"
+        type: warmup_transformer
         warmup_step: 10000
         d_model: 512

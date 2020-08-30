@@ -76,3 +76,37 @@ class TransformerEncoder(torch.nn.Module):
         outputs = outputs.permute(1, 0, 2)
 
         return outputs, output_lengths
+
+
+class GRU_Encoder(torch.nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.d_input = config["d_input"]
+        self.d_model = config["d_model"]
+        self.n_layers = config["n_layers"]
+        self.dropout = config["dropout"]
+        self.bidirectional = True
+        self.d_output = self.d_model * self.n_layers
+
+        self.encoder = nn.GRU(self.d_input, self.d_model,
+                              num_layers=self.n_layers, dropout=self.dropout,
+                              bidirectional=self.bidirectional, batch_first=True)
+
+        for layer_p in self.encoder._all_weights:
+            for p in layer_p:
+                if 'weight' in p:
+                    nn.init.kaiming_normal_(self.encoder.__getattr__(p),
+                                            mode='fan_out', nonlinearity='relu')
+
+    def init_hidden(self, batch_size, device):
+        return torch.zeros(self.n_layers * (2 if self.bidirectional else 1),
+                           batch_size, self.d_model).to(device)
+
+    def forward(self, feats, feat_lengths):
+
+        hidden = self.init_hidden(len(feats), feats.device)
+        x, state = self.encoder(feats, hidden)
+        len_x = feat_lengths
+
+        return x, len_x

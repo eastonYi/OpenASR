@@ -17,7 +17,7 @@ class TimeBasedSampler(Sampler):
         batch_dur = 0.
         for idx in range(len(self.dataset)):
             batch.append(idx)
-            batch_dur += self.dataset[idx]["duration"]
+            batch_dur += self.dataset[idx]["feat_length"]
             if batch_dur >= self.dur and len(batch)%ngpu==0:
                 # To make the numbers of batchs are equal for each GPU.
                 batchs.append(batch)

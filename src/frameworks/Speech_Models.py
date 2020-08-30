@@ -339,7 +339,7 @@ class Conv_CTC_Transformer(Conv_Transformer):
         self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
 
 
-class CIF(Conv_CTC_Transformer):
+class CIF(Conv_Transformer):
     def __init__(self, splayer, encoder, assigner, decoder):
         super().__init__(splayer, encoder, decoder)
         self.assigner = assigner
@@ -351,9 +351,7 @@ class CIF(Conv_CTC_Transformer):
 
         encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
         encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
-        ctc_logits = self.ctc_fc(encoder_outputs)
 
-        len_logits_ctc = encoder_output_lengths
         alphas = self.assigner(encoder_outputs, encoder_output_lengths)
 
         # sum
@@ -367,11 +365,10 @@ class CIF(Conv_CTC_Transformer):
 
         logits = self.decoder(cif_outputs, target_ids, target_lengths)
 
-        ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, target_labels, target_lengths)
         qua_loss = cal_qua_loss(_num, num)
         ce_loss = cal_ce_loss(logits, target_labels, target_paddings, label_smooth)
 
-        return ctc_loss, qua_loss, ce_loss
+        return qua_loss, ce_loss
 
     def cif(self, hidden, alphas, threshold=0.95, log=False):
         device = hidden.device
@@ -435,7 +432,7 @@ class CIF(Conv_CTC_Transformer):
 
         return encoded, len_encoded
 
-    @classmethod
+    @staticmethod
     def batch_beam_decode(encoded, len_encoded, step_forward_fn, vocab_size, beam_size=1, max_decode_len=None):
         batch_size = len_encoded.size(0)
         device = encoded.device
@@ -512,6 +509,81 @@ class CIF(Conv_CTC_Transformer):
         model = cls(splayer, encoder, assigner, decoder)
 
         return model
+
+    def package(self):
+        pkg = {
+            "splayer_config": self.splayer.config,
+            "splayer_state": self.splayer.state_dict(),
+            "encoder_config": self.encoder.config,
+            "encoder_state": self.encoder.state_dict(),
+            "assigner_config": self.assigner.config,
+            "assigner_state": self.assigner.state_dict(),
+            "decoder_config": self.decoder.config,
+            "decoder_state": self.decoder.state_dict()
+             }
+        return pkg
+
+    def restore(self, pkg):
+        # check config
+        logging.info("Restore model states...")
+        for key in self.splayer.config.keys():
+            if key == "spec_aug":
+                continue
+            if self.splayer.config[key] != pkg["splayer_config"][key]:
+                raise ValueError("splayer_config mismatch.")
+        for key in self.encoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.encoder.config[key] != pkg["encoder_config"][key]):
+                raise ValueError("encoder_config mismatch.")
+        for key in self.assigner.config.keys():
+            if (key != "dropout_rate" and
+                    self.assigner.config[key] != pkg["assigner_config"][key]):
+                raise ValueError("assigner_config mismatch.")
+        for key in self.decoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.decoder.config[key] != pkg["decoder_config"][key]):
+                raise ValueError("decoder_config mismatch.")
+
+        self.splayer.load_state_dict(pkg["splayer_state"])
+        self.encoder.load_state_dict(pkg["encoder_state"])
+        self.assigner.load_state_dict(pkg["assigner_state"])
+        self.decoder.load_state_dict(pkg["decoder_state"])
+
+
+class CTC_CIF(CIF):
+
+    def __init__(self, splayer, encoder, assigner, decoder):
+        super().__init__(splayer, encoder, assigner, decoder)
+        self.ctc_fc = nn.Linear(encoder.d_model, decoder.vocab_size, bias=False)
+        self._reset_parameters()
+
+    def forward(self, batch_wave, lengths, target_ids, target_labels=None, target_paddings=None, label_smooth=0., threshold=0.95):
+        device = batch_wave.device
+        target_lengths = torch.sum(1-target_paddings, dim=-1).long()
+
+        encoder_outputs, encoder_output_lengths = self.splayer(batch_wave, lengths)
+        encoder_outputs, encoder_output_lengths = self.encoder(encoder_outputs, encoder_output_lengths)
+        ctc_logits = self.ctc_fc(encoder_outputs)
+
+        len_logits_ctc = encoder_output_lengths
+        alphas = self.assigner(encoder_outputs, encoder_output_lengths)
+
+        # sum
+        _num = alphas.sum(-1)
+        # scaling
+        num = target_lengths.float()
+        num_noise = num + 0.9 * torch.rand(alphas.size(0)).to(device) - 0.45
+        alphas *= (num_noise / _num)[:, None].repeat(1, alphas.size(1))
+
+        cif_outputs = self.cif(encoder_outputs, alphas, threshold=threshold)
+
+        logits = self.decoder(cif_outputs, target_ids, target_lengths)
+
+        ctc_loss = cal_ctc_loss(ctc_logits, len_logits_ctc, target_labels, target_lengths)
+        qua_loss = cal_qua_loss(_num, num)
+        ce_loss = cal_ce_loss(logits, target_labels, target_paddings, label_smooth)
+
+        return ctc_loss, qua_loss, ce_loss
 
     def package(self):
         pkg = {
@@ -760,3 +832,87 @@ class CIF_MIX(CIF_FC):
         self.decoder.load_state_dict(pkg["decoder_state"])
         self.ctc_fc.load_state_dict(pkg["ctc_fc_state"])
         self.phone_fc.load_state_dict(pkg["phone_fc_state"])
+
+
+class GRU_CTC_Model(Conv_CTC):
+    def __init__(self, splayer, encoder, vocab_size):
+        super().__init__(splayer, encoder, vocab_size)
+        self.splayer = splayer
+        self.encoder = encoder
+        self.vocab_size = vocab_size
+        self.fc = nn.Linear(encoder.d_output, vocab_size, bias=False)
+        self._reset_parameters()
+
+    def get_encoded(self, feats, len_feats):
+        encoded, len_encoded = self.splayer(feats, len_feats)
+        len_encoded = len_encoded // 8
+        B, T, D = encoded.size()
+        encoded = encoded[:, :len_encoded.max()*8, :].reshape(B, len_encoded.max(), D * 8)
+        encoded, len_encoded = self.encoder(encoded, len_encoded)
+
+        return encoded, len_encoded
+
+    @staticmethod
+    def batch_beam_decode(logits, len_logits, decode_fn, vocab_size, beam_size, max_decode_len):
+
+        prob = torch.softmax(logits, -1)
+        beam_results, beam_scores, timesteps, out_seq_len = decode_fn.decode(prob)
+
+        return beam_results, out_seq_len, beam_scores
+
+    @classmethod
+    def create_model(cls, sp_config, en_config, vocab_size):
+        from blocks.sp_layers import WavConv as SPLayer
+        from blocks.encoders import GRU_Encoder as Encoder
+
+        splayer = SPLayer(sp_config)
+        encoder = Encoder(en_config)
+
+        model = cls(splayer, encoder, vocab_size)
+
+        return model
+
+    def package(self):
+        pkg = {
+            "splayer_config": self.splayer.config,
+            "splayer_state": self.splayer.state_dict(),
+            "encoder_config": self.encoder.config,
+            "encoder_state": self.encoder.state_dict(),
+            "vocab_size": self.vocab_size,
+            "fc_state": self.fc.state_dict(),
+             }
+        return pkg
+
+    def load_splayer(self, pkg):
+        logging.info("Loading pretrained sp_layer...")
+        for key in self.splayer.config.keys():
+            if self.splayer.config[key] != pkg["encoder_config"][key]:
+                raise ValueError("splayer_config mismatch.")
+
+        self.splayer.load_state_dict(pkg["encoder_state"])
+    
+    # def load_splayer(self, pkg):
+    #     logging.info("Loading pretrained sp_layer...")
+    #     params_to_load = self.splayer.state_dict()
+    #     for name, param in pkg['state'].items():
+    #         if name in params_to_load.keys():
+    #             params_to_load[name] = param
+    #     self.splayer.load_state_dict(params_to_load)
+
+    def restore(self, pkg, without_fc=False):
+        # check config
+        logging.info("Restore model states...")
+        for key in self.splayer.config.keys():
+            if key == "spec_aug":
+                continue
+            if self.splayer.config[key] != pkg["splayer_config"][key]:
+                raise ValueError("splayer_config mismatch.")
+        for key in self.encoder.config.keys():
+            if (key != "dropout_rate" and
+                    self.encoder.config[key] != pkg["encoder_config"][key]):
+                raise ValueError("encoder_config mismatch.")
+
+        self.splayer.load_state_dict(pkg["splayer_state"])
+        self.encoder.load_state_dict(pkg["encoder_state"])
+        if not without_fc:
+            self.fc.load_state_dict(pkg["fc_state"])

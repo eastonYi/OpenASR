@@ -32,16 +32,27 @@ class TextCollate(object):
         return ids, labels, paddings
 
 
-class WaveCollate(object):
-    def __init__(self, tokenizer, maxlen, add_eos=False):
+def waveCollate(batch):
+    utts = [d["uttid"] for d in batch]
+    paths = ['flac:' + d["path"] for d in batch]
+    padded_waveforms, wave_lengths = load_wave_batch(paths)
+
+    return utts, (padded_waveforms, wave_lengths)
+
+
+class WaveSampleCollate(object):
+    def __init__(self, tokenizer, add_eos=False, label_type='tokens'):
         self.tokenizer = tokenizer
-        self.maxlen = maxlen
+        self.label_type = label_type
         self.add_eos = add_eos
 
     def __call__(self, batch):
-        utts = [d["utt"] for d in batch]
-        paths = [d["path"] for d in batch]
-        trans = [d["transcript"] for d in batch]
+        utts = [d["uttid"] for d in batch]
+        paths = ['flac:' + d["feat"] for d in batch]
+        if self.label_type == 'tokens':
+            trans = [d["tokens"] for d in batch]
+        elif self.label_type == 'phones':
+            trans = [d["phones"] for d in batch]
         timer = utils.Timer()
         timer.tic()
         padded_waveforms, wave_lengths = load_wave_batch(paths)

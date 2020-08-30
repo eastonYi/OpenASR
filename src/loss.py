@@ -42,3 +42,13 @@ def _compute_cross_entropy_losses(logits, labels, paddings):
                              reduction="none").view(B, T) * (1-paddings).float()
 
     return losses
+
+
+def cal_ce_square_loss(prob_square, target_square):
+    """
+    prob_square:   b x t x t
+    target_square: b x t x t
+    """
+    loss = torch.abs(prob_square - target_square).sum()
+
+    return loss

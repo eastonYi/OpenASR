@@ -6,6 +6,7 @@ import time
 import numpy as np
 import torch
 from collections import defaultdict
+import soundfile as sf
 
 from third_party import wavfile
 
@@ -103,7 +104,6 @@ def load_wave(path):
     """
     path can be wav filename or pipeline
     """
-
     # parse path
     items = path.strip().split(":", 1)
     if len(items) != 2:
@@ -122,6 +122,8 @@ def load_wave(path):
         with open(fn, 'rb') as f:
             f.seek(offset)
             sample_rate, data = wavfile.read(f, offset=offset)
+    elif tag == 'flac':
+        data, sample_rate = sf.read(path)
     else:
         raise ValueError("Unknown file tag.")
     data = data.astype(np.float32)
@@ -164,6 +166,12 @@ class Timer(object):
 # ==========================================
 # auxilary functions for sequence
 # ==========================================
+
+def freeze(module):
+    for name, param in module.named_parameters():
+        param.requires_grad = False
+        print('{}\tfreezed'.format(name))
+
 
 def sequence_mask(lengths, maxlen=None, dtype=torch.float):
     if maxlen is None:

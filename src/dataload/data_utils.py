@@ -64,6 +64,27 @@ class CharTokenizer(object):
         return len(self.unit2id)
 
 
+class SubwordTokenizer(CharTokenizer):
+    def __init__(self, fn_vocab, add_blk=False):
+        units = [UNK_SYM, SOS_SYM, EOS_SYM]
+        with open(fn_vocab, 'r') as f:
+            for line in f:
+                unit = line.strip().split()[0]
+                units.append(unit)
+        if add_blk:
+            units += [BLK_SYM]
+        self.unit2id = {k:v for v,k in enumerate(units)}
+        self.id2unit = units
+
+    def decode(self, ids, split_token=True, remove_special_sym=True):
+        syms = [self.id2unit[i] for i in ids]
+        if remove_special_sym:
+            syms = [sym for sym in syms if sym not in SPECIAL_SYM_SET]
+        if split_token:
+            return " ".join(syms).replace('@@ ')
+        return "".join(syms)
+
+
 def gen_casual_targets(idslist, add_eos, sos_id=1, eos_id=2):
     if add_eos:
         ids_with_sym_list = [[sos_id]+ids+[eos_id] for ids in idslist]

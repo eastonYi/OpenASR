@@ -1,0 +1,31 @@
+data:
+  trainset: /data3/easton/data/Librispeech/LibriSpeech/train-960.flist
+  devset: /data3/easton/data/Librispeech/LibriSpeech/dev-other.flist
+  fetchworker_num: 4
+  feat_range: 5000,300000
+model:
+  type: encoder_cpc
+  sp:
+      d_model: 512
+  cpc:
+      d_input: 512
+      d_coding: 256
+      n_layers: 1
+      n_steps: 12
+training:
+    batch_time: 3000000
+    multi_gpu: False
+    exp_dir: exp/cpc_pretrain_960h_new
+    print_inteval: 500
+    num_epoch: 80
+    accumulate_grad_batch: 8
+    init_lr: 1.0
+    optimtype: adam
+    grad_max_norm: 50.
+    label_smooth: 0.1
+    num_last_ckpt_keep: 10
+    pretrained_model:
+    lr_scheduler:
+        type: warmup_transformer
+        warmup_step: 10000
+        d_model: 512

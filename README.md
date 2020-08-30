@@ -36,11 +36,8 @@ A pytorch based end2end speech recognition system. The main architecture is [Spe
 We use KALDI style example organization. The example directory include top-level shell scripts, data directory, exp directory. We provide an AISHELL-1 example. The path is ROOT/egs/aishell1/s5.
 
 ### Data Preparation
-The data preparation script is prep_data.sh. It will automaticlly download AISHELL-1 dataset, and format it into KALDI style data directory. Then, it will generate json files, and grapheme vocabulary. You can set `corpusdir` for storing dataset.
-
-    bash prep_data.sh
-
-Then, it will generate data directory and exp directory.
+- aishell1
+python ~/projects/OpenASR/tools/gen_json.py --feat feats.scp --num_frames utt2num_frames --trans text --output train.json
 
 ### Train Models
 We use yaml files for parameter configuration. We provide 3 examples.
@@ -63,6 +60,10 @@ Run decode_test.sh script for decoding test set.
 
     bash decode_test.sh
     bash score.sh data/test/text exp/exp1/decode_test_avg10
+
+## CPC
+### DATA Prepare
+python ~/projects/OpenASR/tools/gen_wav_flist.py --wav-dir test-clean  --ext flac --output test-clean.flist
 
 ## Acknowledgement
 This system is implemented with PyTorch. We use wave reading codes from SciPy. We use SCTK software for scoring. Thanks to Dan Povey's team and their KALDI software. I learn ASR concept, and example organization from KALDI. And thanks to Google Lingvo Team. I learn the modular design from Lingvo.

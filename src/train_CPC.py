@@ -21,7 +21,7 @@ import torch
 from torch.utils.data import DataLoader
 
 import utils
-from dataload import datasets, collates, samplers, data_utils
+from dataload import datasets, samplers, data_utils, collates
 
 
 if "LAS_LOG_LEVEL" in os.environ:
@@ -41,10 +41,13 @@ def get_args():
     parser = argparse.ArgumentParser(description="""
      Usage: train.py <config>""")
     parser.add_argument("config", help="path to config file")
+    parser.add_argument('--type', type=str, default='pretrain',
+                        help='Continue training from last_model.pt.')
     parser.add_argument('--continue-training', type=utils.str2bool, default=False,
                         help='Continue training from last_model.pt.')
     args = parser.parse_args()
     return args
+
 
 
 if __name__ == "__main__":
@@ -56,66 +59,59 @@ if __name__ == "__main__":
     dataconfig = config["data"]
     trainingconfig = config["training"]
     modelconfig = config["model"]
-
     feat_range = [int(i) for i in dataconfig['feat_range'].split(',')]
-    label_range = [int(i) for i in dataconfig['label_range'].split(',')]
 
     ngpu = 1
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         ngpu = torch.cuda.device_count()
 
-    tokenizer = data_utils.CharTokenizer(dataconfig["vocab_path"], add_blk=modelconfig['add_blk'])
-    modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
-    if modelconfig['signal']["feature_type"] == 'offline':
-        training_set = datasets.ArkDataset(dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
-        valid_set = datasets.ArkDataset(dataconfig["devset"], reverse=True)
-        collate = collates.FeatureCollate(tokenizer, modelconfig["add_eos"], trainingconfig["label_type"])
-        trainingsampler = samplers.FrameBasedSampler(training_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=True)
-        validsampler = samplers.FrameBasedSampler(valid_set, trainingconfig["batch_frames"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
-    else:
-        training_set = datasets.SpeechDataset(dataconfig["trainset"])
-        valid_set = datasets.SpeechDataset(dataconfig["devset"], reverse=True)
-        collate = collates.WaveCollate(tokenizer, dataconfig["maxlen"], modelconfig["add_eos"])
+    if args.type == 'pretrain':
+        training_set = datasets.SpeechDataset(dataconfig["trainset"], feat_range=feat_range)
+        valid_set = datasets.SpeechDataset(dataconfig["devset"], reverse=True, feat_range=feat_range)
         trainingsampler = samplers.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
         validsampler = samplers.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
 
-    tr_loader = DataLoader(training_set,collate_fn=collate, batch_sampler=trainingsampler,
-                           shuffle=False, num_workers=dataconfig["fetchworker_num"])
-    cv_loader = DataLoader(valid_set, collate_fn=collate, batch_sampler=validsampler,
-                           shuffle=False, num_workers=dataconfig["fetchworker_num"])
+        tr_loader = DataLoader(training_set, collate_fn=collates.waveCollate,
+                               batch_sampler=trainingsampler, shuffle=False,
+                               num_workers=dataconfig["fetchworker_num"])
+        cv_loader = DataLoader(valid_set, collate_fn=collates.waveCollate,
+                               batch_sampler=validsampler, shuffle=False,
+                               num_workers=dataconfig["fetchworker_num"])
 
-    if modelconfig['type'] == 'conv-transformer':
-        from frameworks.Speech_Models import Conv_Transformer as Model
-        from solvers import CE_Solver as Solver
+        from frameworks.CPC_Models import CPC_Model as Model
+        from solvers import CPC_Solver as Solver
 
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   modelconfig["decoder"])
+        model = Model.create_model(modelconfig['sp'], modelconfig['cpc'])
 
-    elif modelconfig['type'] == 'conv-ctc-transformer':
-        from frameworks.Speech_Models import Conv_CTC_Transformer as Model
-        from solvers import CTC_CE_Solver as Solver
+    elif args.type == 'finetune':
 
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   modelconfig["decoder"])
+        tokenizer = data_utils.SubwordTokenizer(dataconfig["vocab_path"], add_blk=modelconfig['add_blk'])
+        modelconfig["decoder"]["vocab_size"] = tokenizer.unit_num()
+        label_range = [int(i) for i in dataconfig['label_range'].split(',')]
 
-    elif modelconfig['type'] == 'CIF':
-        from frameworks.Speech_Models import CIF as Model
-        from solvers import CIF_Solver as Solver
+        training_set = datasets.SpeechDataset(dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
+        valid_set = datasets.SpeechDataset(dataconfig["devset"], reverse=True, feat_range=feat_range, label_range=label_range)
+        trainingsampler = samplers.TimeBasedSampler(training_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=True)
+        validsampler = samplers.TimeBasedSampler(valid_set, trainingconfig["batch_time"]*ngpu, ngpu, shuffle=False) # for plot longer utterance
+        collect = collates.WaveSampleCollate(tokenizer, add_eos=modelconfig["add_eos"],
+                                             label_type=trainingconfig["label_type"])
+        tr_loader = DataLoader(training_set, collate_fn=collect, batch_sampler=trainingsampler,
+                               shuffle=False, num_workers=dataconfig["fetchworker_num"])
+        cv_loader = DataLoader(valid_set, collate_fn=collect, batch_sampler=validsampler,
+                               shuffle=False, num_workers=dataconfig["fetchworker_num"])
 
-        model = Model.create_model(modelconfig["signal"],
-                                   modelconfig["encoder"],
-                                   modelconfig["assigner"],
-                                   modelconfig["decoder"])
-
-    elif modelconfig['type'] == 'conv-ctc':
-        from frameworks.Speech_Models import Conv_CTC as Model
+        from frameworks.Speech_Models import GRU_CTC_Model as Model
         from solvers import CTC_Solver as Solver
 
         model = Model.create_model(modelconfig["signal"],
                                    modelconfig["encoder"],
-                                   vocab_size=modelconfig["decoder"]["vocab_size"])
+                                   modelconfig["decoder"]["vocab_size"])
+
+        if trainingconfig['load_splayer']:
+            logging.info("Load pretrained splayer from {}.".format(trainingconfig["load_splayer"]))
+            pkg = torch.load(trainingconfig["load_splayer"])
+            model.load_splayer(pkg["model"])
+            # utils.freeze(model.splayer)
 
     logging.info("\nModel info:\n{}".format(model))
 
@@ -123,11 +119,6 @@ if __name__ == "__main__":
         logging.info("Load package from {}.".format(os.path.join(trainingconfig["exp_dir"], "last.pt")))
         pkg = torch.load(os.path.join(trainingconfig["exp_dir"], "last.pt"))
         model.restore(pkg["model"])
-    elif trainingconfig['pretrained_model']:
-        logging.info("Load package from {}.".format(trainingconfig['pretrained_model']))
-        pkg = torch.load(trainingconfig['pretrained_model'])
-        model.restore(pkg["model"], without_fc=True)
-        trainingconfig['init_lr'] *= 0.1
 
     if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
         logging.info("Let's use {} GPUs!".format(torch.cuda.device_count()))
