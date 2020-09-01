@@ -1,13 +1,13 @@
 # continue_training:
 data:
   trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train
-  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
+  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ma_dev.json
   vocab_path: /home/easton/projects/OpenASR/egs/callhome_hkust/data/callhome.IPA
   fetchworker_num: 4
   feat_range: 1,1000
   label_range: 0,50
 model:
-  type: Conv_CTC
+  type: conv-ctc
   add_eos: False
   add_blk: True
   signal:

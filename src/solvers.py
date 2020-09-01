@@ -327,7 +327,7 @@ class CTC_Solver(CE_Solver):
                         logits, len_logits = self.model.get_logits(feats[:1], len_feat[:1])
                         blk_idx = logits.size(-1) - 1
                         align = torch.argmax(logits[0], -1)[:len_logits[0]]
-                        print('infer:\n', align[align<blk_idx].tolist())
+                        print('infer:\n', utils.ctc_reduce(align[align<blk_idx].tolist()))
                         print('target:\n', targets[0][:len_target[0]].tolist())
             else:
                 ctc_loss = self.model(feats, len_feat, targets, len_target)

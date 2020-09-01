@@ -111,7 +111,7 @@ if __name__ == "__main__":
             logging.info("Load pretrained splayer from {}.".format(trainingconfig["load_splayer"]))
             pkg = torch.load(trainingconfig["load_splayer"])
             model.load_splayer(pkg["model"])
-            # utils.freeze(model.splayer)
+            utils.freeze(model.splayer)
 
     logging.info("\nModel info:\n{}".format(model))
 

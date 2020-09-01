@@ -86,7 +86,7 @@ class GRU_Encoder(torch.nn.Module):
         self.d_model = config["d_model"]
         self.n_layers = config["n_layers"]
         self.dropout = config["dropout"]
-        self.bidirectional = True
+        self.bidirectional = False
         self.d_output = self.d_model * self.n_layers
 
         self.encoder = nn.GRU(self.d_input, self.d_model,

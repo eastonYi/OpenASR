@@ -1,8 +1,8 @@
 # continue_training:
 data:
-  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train/ja_train.json
-  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ja_dev.json
-  vocab_path: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ja.char
+  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train/ma_train.json
+  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ma_dev.json
+  vocab_path: /home/easton/projects/OpenASR/egs/callhome_hkust/data/vocab_ma.char
   fetchworker_num: 2
   feat_range: 1,1000
   label_range: 0,50

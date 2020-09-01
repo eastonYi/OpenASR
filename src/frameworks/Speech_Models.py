@@ -551,7 +551,6 @@ class CIF(Conv_Transformer):
 
 
 class CTC_CIF(CIF):
-
     def __init__(self, splayer, encoder, assigner, decoder):
         super().__init__(splayer, encoder, assigner, decoder)
         self.ctc_fc = nn.Linear(encoder.d_model, decoder.vocab_size, bias=False)
@@ -845,9 +844,9 @@ class GRU_CTC_Model(Conv_CTC):
 
     def get_encoded(self, feats, len_feats):
         encoded, len_encoded = self.splayer(feats, len_feats)
-        len_encoded = len_encoded // 8
-        B, T, D = encoded.size()
-        encoded = encoded[:, :len_encoded.max()*8, :].reshape(B, len_encoded.max(), D * 8)
+        # len_encoded = len_encoded // 8
+        # B, T, D = encoded.size()
+        # encoded = encoded[:, :len_encoded.max()*8, :].reshape(B, len_encoded.max(), D * 8)
         encoded, len_encoded = self.encoder(encoded, len_encoded)
 
         return encoded, len_encoded
@@ -890,7 +889,7 @@ class GRU_CTC_Model(Conv_CTC):
                 raise ValueError("splayer_config mismatch.")
 
         self.splayer.load_state_dict(pkg["encoder_state"])
-    
+
     # def load_splayer(self, pkg):
     #     logging.info("Loading pretrained sp_layer...")
     #     params_to_load = self.splayer.state_dict()

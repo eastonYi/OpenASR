@@ -212,3 +212,13 @@ def get_transformer_casual_masks(T):
     masks = -torch.triu(
             torch.ones(T, T), diagonal=1)*9e20
     return masks
+
+
+def ctc_reduce(align):
+    tmp = None
+    res = []
+    for i in align:
+        if i != tmp:
+            res.append(i)
+            tmp = i
+    return res
