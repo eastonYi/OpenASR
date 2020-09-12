@@ -1,11 +1,14 @@
 continue_training:
 data:
-  trainset: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/train.json
-  devset: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/dev.json
-  vocab_phone: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/callhome.IPA
-  vocab_char: /home/easton/projects/OpenASR/egs/hkust_IPA2char/data/vocab.char
+  acoustic: /data3/easton/data/CALLHOME_Multilingual/jsons/train/hkust_train.json
+  trainset: /data3/easton/data/CALLHOME_Multilingual/ma/train/data.json
+  devset: /data3/easton/data/CALLHOME_Multilingual/ma/dev/data.json
+  vocab_phone: /data3/easton/data/CALLHOME_Multilingual/jsons/callhome.IPA
+  vocab_char: /data3/easton/data/CALLHOME_Multilingual/ma/train/vocab.char
   maxlen: 999
   fetchworker_num: 4
+  feat_range: 1,1000
+  label_range: 0,50
 model:
   type: Embed_Decoder
   add_eos: True
@@ -24,10 +27,11 @@ model:
     activation: "glu"
     dropout_rate: 0.1
 training:
+    type: phone2char
     label_type: phones_chars
     batch_size: 200
     multi_gpu: False
-    exp_dir: exp/pinyin2char
+    exp_dir: exp/IPA2char
     print_inteval: 50
     num_epoch: 80
     accumulate_grad_batch: 8

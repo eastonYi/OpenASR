@@ -29,7 +29,7 @@ class TransformerEncoder(torch.nn.Module):
         self.config = config
 
         self.input_dim = config["input_dim"]
-        self.d_model = config["d_model"]
+        self.d_output = self.d_model = config["d_model"]
         self.nhead = config["nhead"]
         self.dim_feedforward = config["dim_feedforward"]
         self.num_layers = config["num_layers"]
@@ -46,6 +46,8 @@ class TransformerEncoder(torch.nn.Module):
                 self.context_width = config["context_width"]
                 self.subsample = config["subsample"]
                 self.sub = Conv1dSubsample(self.input_dim, self.d_model, self.context_width, self.subsample)
+        elif self.input_dim == self.d_model:
+            self.affine = lambda x: x
         else:
             self.affine = torch.nn.Linear(self.input_dim, self.d_model)
 

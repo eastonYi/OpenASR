@@ -6,4 +6,4 @@ gpu=$2
 
 export CUDA_VISIBLE_DEVICES=$gpu
 python $SRC_ROOT/train_phone2char.py $config
-# python $MAIN_ROOT/src/train.py --continue-training True $config
+# python $SRC_ROOT/train_phone2char.py --continue-training True $config

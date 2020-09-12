@@ -1,0 +1,47 @@
+continue_training:
+data:
+  acoustic: /data3/easton/data/CALLHOME_Multilingual/jsons/train/hkust_train.json
+  trainset: /data3/easton/data/CALLHOME_Multilingual/ma/train/data.json
+  devset: /data3/easton/data/CALLHOME_Multilingual/ma/dev/data.json
+  vocab_phone: /data3/easton/data/CALLHOME_Multilingual/jsons/callhome.IPA
+  vocab_char: /data3/easton/data/CALLHOME_Multilingual/ma/train/vocab.char
+  maxlen: 999
+  fetchworker_num: 4
+  feat_range: 2,1000
+  label_range: 2,50
+model:
+  type: Embed_Decoder_CTC
+  add_eos: False
+  add_blk: True
+  encoder:
+    vocab_size: -1 # derived by tokenizer
+    d_model: 512
+  decoder:
+    type: TransformerEncoder
+    vocab_size: -1 # derived by tokenizer
+    sub:
+    d_model: 512
+    input_dim: 512
+    nhead: 8
+    dim_feedforward: 2048
+    activation: "glu"
+    num_layers: 6
+    dropout_rate: 0.1
+training:
+    type: phone2char
+    label_type: phones_chars
+    batch_size: 100
+    multi_gpu: False
+    exp_dir: exp/IPA2char
+    print_inteval: 10
+    num_epoch: 80
+    accumulate_grad_batch: 8
+    init_lr: 0.5
+    optimtype: adam
+    grad_max_norm: 50.
+    label_smooth: 0.1
+    num_last_ckpt_keep: 5
+    lr_scheduler:
+        type: warmup_transformer
+        warmup_step: 1000
+        d_model: 512

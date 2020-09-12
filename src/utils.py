@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from collections import defaultdict
 import soundfile as sf
+import editdistance as ed
 
 from third_party import wavfile
 
@@ -153,6 +154,14 @@ def str2bool(v):
         raise 'Unsupported value encountered.'
 
 
+def batch_distance(hpys, len_hyps, refs, len_refs):
+    total_dist = 0
+    for hpy, len_hyp, ref, len_ref in zip(hpys, len_hyps, refs, len_refs):
+        total_dist += ed.eval(hpy[:len_hyp], ref[:len_ref])
+
+    return total_dist
+
+
 class Timer(object):
     def __init__(self):
         self.start = 0.
@@ -213,6 +222,7 @@ def get_transformer_casual_masks(T):
             torch.ones(T, T), diagonal=1)*9e20
     return masks
 
+# == ctc related ==
 
 def ctc_reduce(align):
     tmp = None
@@ -222,3 +232,47 @@ def ctc_reduce(align):
             res.append(i)
             tmp = i
     return res
+
+
+def ctc_shrink(logits, pad, blk):
+    """only count the first one for the repeat freams
+    """
+    device = logits.device
+    B, T, V = logits.size()
+    tokens = torch.argmax(logits, -1)
+    # intermediate vars along time
+    list_fires = []
+    token_prev = torch.ones(B).to(device) * -1
+    blk_batch = torch.ones(B).to(device) * blk
+    pad_batch = torch.ones(B).to(device) * pad
+
+    for t in range(T):
+        token = tokens[:, t]
+        fire_place = torch.logical_and(token != blk_batch, token != token_prev)
+        fire_place = torch.logical_and(fire_place, token != pad_batch)
+        list_fires.append(fire_place)
+        token_prev = token
+
+    fires = torch.stack(list_fires, 1)
+    len_decode = fires.sum(-1)
+    max_decode_len = len_decode.max()
+    list_ls = []
+
+    for b in range(B):
+        l = logits[b, :, :].index_select(0, torch.where(fires[b])[0])
+        pad_l = torch.zeros([max_decode_len - l.size(0), V]).to(device)
+        list_ls.append(torch.cat([l, pad_l], 0))
+
+    logits_shrunk = torch.stack(list_ls, 0)
+
+    return logits_shrunk, len_decode
+
+
+def ctc_decode_fn(units, beam_width, blank_id, num_processes=2):
+    from ctcdecode import CTCBeamDecoder
+
+    fn = CTCBeamDecoder(units,
+                        beam_width=beam_width,
+                        blank_id=blank_id,
+                        num_processes=num_processes)
+    return fn

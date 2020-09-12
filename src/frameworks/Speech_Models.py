@@ -19,6 +19,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
 
+from frameworks import Framework
 from loss import cal_ctc_loss, cal_ce_loss, cal_qua_loss
 
 inf = 1e10
@@ -26,9 +27,8 @@ SOS_ID = 1
 EOS_ID = 2
 
 
-class Conv_CTC(torch.nn.Module):
+class Conv_CTC(Framework):
     def __init__(self, splayer, encoder, vocab_size):
-        super().__init__()
         self.splayer = splayer
         self.encoder = encoder
         self.vocab_size = vocab_size
@@ -54,7 +54,7 @@ class Conv_CTC(torch.nn.Module):
         return encoded, len_encoded
 
     @staticmethod
-    def batch_beam_decode(logits, len_logits, decode_fn, vocab_size, beam_size, max_decode_len):
+    def batch_beam_decode(logits, len_logits, decode_fn):
 
         prob = torch.softmax(logits, -1)
         beam_results, beam_scores, timesteps, out_seq_len = decode_fn.decode(prob)
@@ -102,13 +102,8 @@ class Conv_CTC(torch.nn.Module):
         if not without_fc:
             self.fc.load_state_dict(pkg["fc_state"])
 
-    def _reset_parameters(self):
-        for p in self.parameters():
-            if p.dim() > 1:
-                xavier_uniform_(p)
 
-
-class Conv_Transformer(torch.nn.Module):
+class Conv_Transformer(Framework):
     def __init__(self, splayer, encoder, decoder):
         super().__init__()
         self.splayer = splayer
@@ -258,11 +253,6 @@ class Conv_Transformer(torch.nn.Module):
                                 'emb.weight')}
             pkg["decoder_state"].update(params_to_init)
         self.decoder.load_state_dict(pkg["decoder_state"])
-
-    def _reset_parameters(self):
-        for p in self.parameters():
-            if p.dim() > 1:
-                xavier_uniform_(p)
 
 
 class Conv_CTC_Transformer(Conv_Transformer):

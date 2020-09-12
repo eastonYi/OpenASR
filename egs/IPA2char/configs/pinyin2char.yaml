@@ -1,0 +1,42 @@
+continue_training:
+data:
+  trainset: /data3/easton/data/CALLHOME_Multilingual/jsons/train
+  devset: /data3/easton/data/CALLHOME_Multilingual/jsons/dev/ma_dev.json
+  vocab_phone: /data3/easton/data/CALLHOME_Multilingual/jsons/callhome.IPA
+  vocab_char: /data3/easton/data/CALLHOME_Multilingual/ma/train/vocab.char
+  maxlen: 999
+  fetchworker_num: 4
+model:
+  type: Embed_Decoder
+  add_eos: True
+  add_blk: False
+  encoder:
+    vocab_size: -1 # derived by tokenizer
+    d_model: 512
+  decoder:
+    type: TransformerDecoder
+    vocab_size: -1 # derived by tokenizer
+    d_model: 512
+    nhead: 8
+    num_layers: 4
+    encoder_dim: 512
+    dim_feedforward: 2048
+    activation: glu
+    dropout_rate: 0.1
+training:
+    label_type: phones_chars
+    batch_size: 200
+    multi_gpu: False
+    exp_dir: exp/IPA2char
+    print_inteval: 50
+    num_epoch: 80
+    accumulate_grad_batch: 8
+    init_lr: 0.5
+    optimtype: adam
+    grad_max_norm: 50.
+    label_smooth: 0.1
+    num_last_ckpt_keep: 10
+    lr_scheduler:
+        type: warmup_transformer
+        warmup_step: 1000
+        d_model: 512
