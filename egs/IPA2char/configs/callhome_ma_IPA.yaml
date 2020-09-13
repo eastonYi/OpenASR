@@ -1,6 +1,7 @@
 data:
   acoustic: /data3/easton/data/CALLHOME_Multilingual/jsons/train/hkust_train.json
-  trainset: /data3/easton/data/CALLHOME_Multilingual/ma/train/data.json
+  # trainset: /data3/easton/data/CALLHOME_Multilingual/ma/train/data.json
+  trainset: /data3/easton/data/CALLHOME_Multilingual/ma/train/data_add_hkust.json
   devset: /data3/easton/data/CALLHOME_Multilingual/ma/dev/data.json
   vocab_phone: /data3/easton/data/CALLHOME_Multilingual/jsons/callhome.IPA
   vocab_char: /data3/easton/data/CALLHOME_Multilingual/ma/train/vocab.char
@@ -31,11 +32,11 @@ training:
     label_type: phones_chars
     batch_size: 100
     multi_gpu: False
-    exp_dir: exp/callhone_ma_IPA
-    print_inteval: 10
+    exp_dir: exp/callhone_ma_hkust_IPA
+    print_inteval: 50
     num_epoch: 80
     accumulate_grad_batch: 8
-    init_lr: 0.5
+    init_lr: 0.1
     optimtype: adam
     grad_max_norm: 50.
     label_smooth: 0.1

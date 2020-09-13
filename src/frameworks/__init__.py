@@ -47,3 +47,16 @@ class Framework(torch.nn.Module):
         for p in self.parameters():
             if p.dim() > 1:
                 xavier_uniform_(p)
+
+    def trainable_parameters(self):
+        for p in self.parameters():
+            if p.requires_grad:
+                yield p
+
+    def freeze(self):
+        for p in self.parameters():
+            p.requires_grad = False
+
+    def unfreeze(self):
+        for p in self.parameters():
+            p.requires_grad = True

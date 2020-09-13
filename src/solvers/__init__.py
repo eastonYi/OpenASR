@@ -13,27 +13,27 @@ class Solver(object):
         self.cv_loader = cv_loader
 
         self.model = model
-        if config["multi_gpu"] == True:
+        if config['multi_gpu'] == True:
             self.model_to_pack = self.model.module
         else:
             self.model_to_pack = self.model
 
         self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
-        self.num_epoch = config["num_epoch"]
-        self.exp_dir = config["exp_dir"]
-        self.print_inteval = config["print_inteval"]
+        self.num_epoch = config['num_epoch']
+        self.exp_dir = config['exp_dir']
+        self.print_inteval = config['print_inteval']
 
-        self.accumulate_grad_batch = config["accumulate_grad_batch"]
-        self.init_lr = config["init_lr"]
-        self.grad_max_norm = config["grad_max_norm"]
-        self.label_smooth = config["label_smooth"]
+        self.accumulate_grad_batch = config['accumulate_grad_batch']
+        self.init_lr = config['init_lr']
+        self.grad_max_norm = config['grad_max_norm']
+        self.label_smooth = config['label_smooth']
 
         self.num_last_ckpt_keep = None
         if "num_last_ckpt_keep" in config:
-            self.num_last_ckpt_keep = config["num_last_ckpt_keep"]
+            self.num_last_ckpt_keep = config['num_last_ckpt_keep']
 
-        self.lr_scheduler = schedule.get_scheduler(config["lr_scheduler"])
+        self.lr_scheduler = schedule.get_scheduler(config['lr_scheduler'])
         # Solver state
         self.epoch = 0
         self.step = 0
@@ -41,9 +41,9 @@ class Solver(object):
         self.cv_loss = []
         self.lr = self.init_lr
 
-        if config["optimtype"] == "sgd":
+        if config['optimtype'] == "sgd":
             self.optimizer = torch.optim.SGD(self.model_to_pack.parameters(), lr=self.lr, momentum=0.9)
-        elif config["optimtype"] == "adam":
+        elif config['optimtype'] == "adam":
             self.optimizer = torch.optim.Adam(self.model_to_pack.parameters(), lr=self.lr,
                 betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         else:
@@ -70,7 +70,7 @@ class Solver(object):
     def package(self):
         return {
             "model": self.model_to_pack.package(),
-            "Solver_config": self.config,
+            "Solver_config": dict(self.config),
             "Solver_state": self.training_state(),
             "optim_state": self.optimizer.state_dict(),
             "scheduler_state": self.lr_scheduler.pack_state()
@@ -84,7 +84,7 @@ class Solver(object):
     def restore(self, pkg):
         self.restore_training_state(pkg["Solver_state"])
         self.optimizer.load_state_dict(pkg['optim_state'])
-        self.lr_scheduler.restore_state(pkg["scheduler_state"])
+        self.lr_scheduler.restore_state(pkg['scheduler_state'])
 
     def train(self):
         timer = utils.Timer()

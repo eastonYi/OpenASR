@@ -1,5 +1,6 @@
 data:
-  acoustic: /data3/easton/data/CALLHOME_Multilingual/jsons/train/hkust_train.json
+  acoustic: /data3/easton/data/CALLHOME_Multilingual/hkust/train/trans.phone
+  text: /data3/easton/data/CALLHOME_Multilingual/hkust/train/trans.char
   trainset: /data3/easton/data/CALLHOME_Multilingual/ma/train/data.json
   devset: /data3/easton/data/CALLHOME_Multilingual/ma/dev/data.json
   vocab_phone: /data3/easton/data/CALLHOME_Multilingual/jsons/callhome.IPA
@@ -8,14 +9,15 @@ data:
   fetchworker_num: 4
   feat_range: 1,1000
   label_range: 1,50
-G:
-    type: Embed_Decoder_CTC
-    add_eos: False
-    add_blk: True
-    encoder:
+framework:
+    G:
+      type: Embed_Decoder_CTC
+      add_eos: False
+      add_blk: True
+      encoder:
         vocab_size: -1 # derived by tokenizer
         d_model: 512
-    decoder:
+      decoder:
         type: TransformerEncoder
         vocab_size: -1 # derived by tokenizer
         sub:
@@ -26,23 +28,28 @@ G:
         activation: "glu"
         num_layers: 6
         dropout_rate: 0.1
-D:
-    type: Embed_Decoder_CTC
-training:
-    type: phone2char
-    label_type: phones_chars
-    batch_size: 100
-    multi_gpu: False
-    exp_dir: exp/semi_callhone_ma_IPA
-    print_inteval: 10
-    num_epoch: 80
-    accumulate_grad_batch: 8
-    init_lr: 0.5
-    optimtype: adam
-    grad_max_norm: 50.
-    label_smooth: 0.1
-    num_last_ckpt_keep: 5
-    lr_scheduler:
-        type: warmup_transformer
-        warmup_step: 1000
+    D:
+      type: Discriminator
+      encoder:
+        layer_num: 2
+        d_input: -1
         d_model: 512
+training:
+  task: phone2char
+  label_type: phones_chars
+  batch_size: 50
+  multi_gpu: False
+  exp_dir: exp/semi_callhone_ma_IPA
+  G_path: exp/callhone_ma_IPA/last.pt
+  print_inteval: 10
+  num_epoch: 80
+  accumulate_grad_batch: 8
+  init_lr: 0.1
+  optimtype: adam
+  grad_max_norm: 50.
+  label_smooth: 0.1
+  num_last_ckpt_keep: 5
+  lr_scheduler:
+    type: warmup_transformer
+    warmup_step: 1000
+    d_model: 512

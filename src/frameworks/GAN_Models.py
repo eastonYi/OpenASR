@@ -1,6 +1,7 @@
 """
 Copyright 2020 Ye Bai by1993@qq.com
 """
+import torch
 import torch.nn.functional as F
 
 import utils
@@ -8,47 +9,61 @@ from frameworks import Framework
 from loss import cal_ce_loss, cal_ctc_loss
 
 inf = 1e10
-
+PAD_ID = 2
 
 class GAN_Phone2Char(Framework):
     def __init__(self, G, D):
-        super().__init__()
+        torch.nn.Module.__init__(self)
         self.G = G
         self.D = D
         self._reset_parameters()
 
-    def forward(self, x, len_x, text, text_paddings, _x, _len_x, _y, _y_paddings):
+    def forward(self, x, len_x, y, y_paddings):
 
-        # supervise ['encoder_out', 'encoder_padding_mask', 'padding_mask']
-        _loss = self.G(_x, _len_x, _y, _y_paddings) #
+        return self.G(x, len_x, y, y_paddings)
 
-        # neg score
+    def forward_G(self, x, len_x):
         logits, len_logits = self.G.get_logits(x, len_x)
-        pad = 2
         blk = logits.size(-1) - 1
-        logits_G, len_decode_G = utils.ctc_shrink(logits, pad=pad, blk=blk)
+        logits_G, len_decode_G = utils.ctc_shrink(logits, pad=PAD_ID, blk=blk)
         probs_G = F.softmax(logits_G, -1)
-        mask = utils.sequence_mask(len_decode_G).unsqueeze(-1).repeat(1, 1, probs_G.size(-1))
-        score_neg = self.D(probs_G, mask)
+        loss_G = -self.D(probs_G, len_decode_G).sum()
+
+        return loss_G
+
+    def forward_D(self, x, len_x, text, len_text):
+        with torch.no_grad():
+            logits, len_logits = self.G.get_logits(x, len_x)
+            blk = logits.size(-1) - 1
+            logits_G, len_decode_G = utils.ctc_shrink(logits, pad=PAD_ID, blk=blk)
+            probs_G = F.softmax(logits_G, -1)
+        score_neg = self.D(probs_G, len_decode_G).sum()
 
         # pos score
         feature_text = F.one_hot(text.long(), probs_G.size(-1)).float()
-        score_pos = self.D(feature_text, 1-text_paddings)
+        score_pos = self.D(feature_text, len_text).sum()
 
-        min_len = min(feature_text.size(1), probs_G.size(1))
-        gp = 1.0 * self.D.gradient_penalty(
-            real_data=feature_text[:, :min_len, :],
-            fake_data=probs_G[:, :min_len, :])
+        lengths = torch.min(len_decode_G, len_text)
+        min_len = lengths.max()
+        if min_len > 0:
+            gp = 1.0 * self.D.gradient_penalty(
+                real_data=feature_text[:, :min_len, :],
+                fake_data=probs_G[:, :min_len, :],
+                lengths=lengths)
+        else:
+            gp = 0
 
-        return _loss, score_neg, (score_pos, gp)
+        loss_D = score_neg - score_pos + gp
+
+        return loss_D
 
     @classmethod
     def create_model(cls, G_config, D_config):
         from frameworks.Text_Models import Embed_Decoder_CTC
         from .Discriminators import Discriminator
 
-        G = Embed_Decoder_CTC(G_config)
-        D = Discriminator(D_config)
+        G = Embed_Decoder_CTC.create_model(G_config['encoder'], G_config['decoder'])
+        D = Discriminator.create_model(D_config)
         model = cls(G, D)
         model.G.config = G_config
         model.D.config = D_config
@@ -68,3 +83,8 @@ class GAN_Phone2Char(Framework):
         # check config
         self.G.restore(pkg["G"])
         self.D.restore(pkg["D"])
+
+    def restore_G(self, G_path):
+        print("Load package from {}.".format(G_path))
+        pkg = torch.load(G_path)
+        self.G.restore(pkg['model'])

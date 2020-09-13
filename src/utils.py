@@ -13,33 +13,6 @@ from third_party import wavfile
 
 TENSORBOARD_LOGGING = 0
 
-
-class AttrDict(dict):
-    """
-    Dictionary whose keys can be accessed as attributes.
-    demo:
-    a ={'length': 10, 'shape': (2,3)}
-    config = AttrDict(a)
-    config.length #10
-
-    here we can recurrently use attribute to access confis
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __getattr__(self, item):
-        try:
-            if type(self[item]) is dict:
-                self[item] = AttrDict(self[item])
-            res = self[item]
-        except:
-
-            print('not found {}'.format(item))
-            res = None
-        return res
-
-
 def cycle(iterable):
     while True:
         print('new loop on', iterable)
@@ -91,7 +64,7 @@ def get_command_stdout(command, require_zero_status=True):
                          stdout=subprocess.PIPE)
 
     stdout = p.communicate()[0]
-    if p.returncode is not 0:
+    if p.returncode != 0:
         output = "Command exited with status {0}: {1}".format(
             p.returncode, command)
         if require_zero_status:
@@ -182,12 +155,14 @@ def freeze(module):
         print('{}\tfreezed'.format(name))
 
 
-def sequence_mask(lengths, maxlen=None, dtype=torch.float):
+def sequence_mask(lengths, maxlen=None, depth=None, dtype=torch.float):
     if maxlen is None:
         maxlen = lengths.max()
     mask = torch.ones((len(lengths), maxlen),
                       device=lengths.device,
                       dtype=torch.uint8).cumsum(dim=1) <= lengths.unsqueeze(0).t()
+    if depth:
+        mask = mask.unsqueeze(-1).repeat(1, 1, depth)
 
     return mask.type(dtype)
 

@@ -51,46 +51,46 @@ if __name__ == "__main__":
 
     args = get_args()
     timer.tic()
-    config = utils.AttrDict(yaml.load(open(args.config)))
-    dataconfig = config["data"]
-    trainingconfig = config["training"]
-    modelconfig = config["model"]
+    config = yaml.load(open(args.config))
+    dataconfig = config['data']
+    trainingconfig = config['training']
+    modelconfig = config['model']
 
     feat_range = [int(i) for i in dataconfig['feat_range'].split(',')]
     label_range = [int(i) for i in dataconfig['label_range'].split(',')]
 
     ngpu = 1
-    if "multi_gpu" in trainingconfig and trainingconfig["multi_gpu"] == True:
+    if "multi_gpu" in trainingconfig and trainingconfig['multi_gpu'] == True:
         ngpu = torch.cuda.device_count()
 
-    tokenizer_phone = data_utils.CharTokenizer(dataconfig["vocab_phone"], add_blk=True)
-    tokenizer_char = data_utils.CharTokenizer(dataconfig["vocab_char"], add_blk=modelconfig['add_blk'])
+    tokenizer_phone = data_utils.CharTokenizer(dataconfig['vocab_phone'], add_blk=True)
+    tokenizer_char = data_utils.CharTokenizer(dataconfig['vocab_char'], add_blk=modelconfig['add_blk'])
 
     # model type
     if modelconfig['type'] == 'Embed_Decoder':
         from frameworks.Text_Models import Embed_Decoder as Model
         from solvers.phone2char import Phone2Char_Solver as Solver
 
-        modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
-        modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
-        model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
+        modelconfig['encoder']['vocab_size'] = tokenizer_phone.unit_num()
+        modelconfig['decoder']['vocab_size'] = tokenizer_char.unit_num()
+        model = Model.create_model(modelconfig['encoder'], modelconfig['decoder'])
 
     elif modelconfig['type'] == 'Embed_Decoder_CTC':
         from frameworks.Text_Models import Embed_Decoder_CTC as Model
         from solvers.phone2char import Phone2Char_CTC_Solver as Solver
 
-        modelconfig["encoder"]["vocab_size"] = tokenizer_phone.unit_num()
-        modelconfig["decoder"]["vocab_size"] = tokenizer_char.unit_num()
-        model = Model.create_model(modelconfig["encoder"], modelconfig["decoder"])
+        modelconfig['encoder']['vocab_size'] = tokenizer_phone.unit_num()
+        modelconfig['decoder']['vocab_size'] = tokenizer_char.unit_num()
+        model = Model.create_model(modelconfig['encoder'], modelconfig['decoder'])
 
     # solver type
     if trainingconfig['type'] == 'phone2char':
 
-        acoustic_set = datasets.PhoneCharDataset(dataconfig["acoustic"], feat_range=feat_range, label_range=label_range)
-        training_set = datasets.PhoneCharDataset(dataconfig["trainset"], feat_range=feat_range, label_range=label_range)
-        valid_set = datasets.PhoneCharDataset(dataconfig["devset"], reverse=True)
+        acoustic_set = datasets.PhoneCharDataset(dataconfig['acoustic'], feat_range=feat_range, label_range=label_range)
+        training_set = datasets.PhoneCharDataset(dataconfig['trainset'], feat_range=feat_range, label_range=label_range)
+        valid_set = datasets.PhoneCharDataset(dataconfig['devset'], reverse=True)
 
-        collate = collates.Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig["add_eos"])
+        collate = collates.Phone_Char_Collate(tokenizer_phone, tokenizer_char, modelconfig['add_eos'])
         tr_loader = DataLoader(training_set,
             collate_fn=collate, batch_size=trainingconfig['batch_size'], shuffle=False, num_workers=2)
         cv_loader = DataLoader(valid_set,
@@ -101,8 +101,8 @@ if __name__ == "__main__":
     logging.info("\nModel info:\n{}".format(model))
 
     if args.continue_training:
-        logging.info("Load package from {}.".format(os.path.join(trainingconfig["exp_dir"], "last.pt")))
-        pkg = torch.load(os.path.join(trainingconfig["exp_dir"], "last.pt"))
+        logging.info("Load package from {}.".format(os.path.join(trainingconfig['exp_dir'], "last.pt")))
+        pkg = torch.load(os.path.join(trainingconfig['exp_dir'], "last.pt"))
         model.restore(pkg["model"])
 
     if torch.cuda.is_available():

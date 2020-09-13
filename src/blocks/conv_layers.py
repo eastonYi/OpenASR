@@ -134,6 +134,7 @@ class Conv2dSubsampleV2(torch.nn.Module):
         layers = OrderedDict(layers)
         self.conv = torch.nn.Sequential(layers)
         self.affine = torch.nn.Linear(32 * (d_input-2*layer_num), d_model)
+        self.d_model = d_model
 
     def forward(self, feats, feat_lengths):
         outputs = feats.unsqueeze(1)  # [B, C, T, D]
@@ -144,6 +145,6 @@ class Conv2dSubsampleV2(torch.nn.Module):
         outputs = self.affine(outputs)
         output_lengths = feat_lengths
         for _ in range(self.layer_num):
-            output_lengths = ((output_lengths-1) / 2).long()
+            output_lengths = ((output_lengths - 1) / 2).long()
 
         return outputs, output_lengths

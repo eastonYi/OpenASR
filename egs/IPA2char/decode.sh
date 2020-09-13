@@ -4,7 +4,7 @@ source path.sh
 expdir=$1
 model_type=$2
 gpu=$3
-ep=last
+ep=avg5
 decode_dir=$expdir/decode_test_${ep}
 mkdir -p $decode_dir
 
@@ -18,7 +18,7 @@ python -W ignore::UserWarning $SRC_ROOT/infer_phone2char.py \
     --model_pkg $expdir/${ep}.pt \
     --vocab_char /data3/easton/data/CALLHOME_Multilingual/ma/train/vocab.char \
     --vocab_phone /data3/easton/data/CALLHOME_Multilingual/jsons/callhome.IPA \
-    --json_file /data3/easton/data/CALLHOME_Multilingual/jsons/dev/hkust_dev.json
-    # --vocab_char /data3/easton/data/CALLHOME_Multilingual/ma/train/vocab.char \
-    # --vocab_phone /data3/easton/data/CALLHOME_Multilingual/jsons/callhome.IPA \
-    # --json_file /data3/easton/data/CALLHOME_Multilingual/ma/test/data.json
+    --json_file /data3/easton/data/CALLHOME_Multilingual/ma/test/data.json
+
+
+    # --json_file /data3/easton/data/CALLHOME_Multilingual/jsons/dev/hkust_dev.json

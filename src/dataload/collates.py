@@ -18,6 +18,8 @@ from .data_utils import gen_casual_targets, load_wave_batch, load_feat_batch, pa
 import utils
 
 
+EOS_ID = 1
+
 class TextCollate(object):
     def __init__(self, tokenizer, maxlen):
         self.tokenizer = tokenizer
@@ -102,7 +104,7 @@ class Phone_Char_Collate(object):
         utts = [d["uttid"] for d in batch]
 
         phones = [torch.tensor(self.tokenizer_phone.encode(d["phones"])).long() for d in batch]
-        xs_in, len_xs = pad_list(phones, pad_value=0, return_length=True)
+        xs_in, len_xs = pad_list(phones, pad_value=EOS_ID, return_length=True)
 
         tokens = [self.tokenizer_char.encode(d["tokens"]) for d in batch]
         target_in, target_out, paddings = gen_casual_targets(tokens, self.add_eos)
@@ -119,7 +121,7 @@ class Feat_Phone_Collate(Phone_Char_Collate):
         paths = [d["feat"] for d in batch]
         feats, len_feat = load_feat_batch(paths)
         phones = [torch.tensor(self.tokenizer_phone.encode(d["phones"])).long() for d in batch]
-        phones, len_phone = pad_list(phones, pad_value=0, return_length=True)
+        phones, len_phone = pad_list(phones, pad_value=EOS_ID, return_length=True)
 
         return utts, (feats, len_feat, phones, len_phone)
 
@@ -135,9 +137,40 @@ class Feat_Phone_Char_Collate(Phone_Char_Collate):
         paths = [d["feat"] for d in batch]
         feats, len_feat = load_feat_batch(paths)
         phones = [torch.tensor(self.tokenizer_phone.encode(d["phones"])).long() for d in batch]
-        phones, len_phone = pad_list(phones, pad_value=0, return_length=True)
+        phones, len_phone = pad_list(phones, pad_value=EOS_ID, return_length=True)
 
         tokens = [self.tokenizer_char.encode(d["tokens"]) for d in batch]
         target_in, target_out, paddings = gen_casual_targets(tokens, self.add_eos)
 
         return utts, (feats, len_feat, phones, len_phone, target_in, target_out, paddings)
+
+
+class Semi_Phone_Char_Collate(object):
+    def __init__(self, tokenizer_phone, tokenizer_char, add_eos=False):
+        self.tokenizer_phone = tokenizer_phone
+        self.tokenizer_char = tokenizer_char
+        self.add_eos = add_eos
+
+    def __call__(self, batch):
+        utts = [d["uttid"] for d in batch]
+
+        phones = [torch.tensor(self.tokenizer_phone.encode(d["phones"])).long() for d in batch]
+        xs_in, len_xs = pad_list(phones, pad_value=EOS_ID, return_length=True)
+
+        tokens = [self.tokenizer_char.encode(d["tokens"]) for d in batch]
+        target_in, target_out, paddings = gen_casual_targets(tokens, self.add_eos)
+
+        return utts, (xs_in, len_xs, target_in, target_out, paddings)
+
+
+class TokenCollate(object):
+    def __init__(self, tokenizer, add_eos=False):
+        self.tokenizer = tokenizer
+        self.add_eos = add_eos
+
+    def __call__(self, batch):
+        tokens = [torch.tensor(self.tokenizer.encode(d)).long() for d in batch]
+        xs_in, len_xs = pad_list(tokens, pad_value=EOS_ID, return_length=True)
+        assert xs_in.size(-1) == len_xs.max()
+
+        return xs_in, len_xs
